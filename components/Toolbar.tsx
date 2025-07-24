@@ -125,7 +125,7 @@ export default function Toolbar({
     onBpmChange(localBpm);
   };
 
-  const handleBpmKeyDown = (e: React.KeyEvent) => {
+  const handleBpmKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter') {
       onBpmChange(localBpm);
       bpmInputRef.current?.blur();

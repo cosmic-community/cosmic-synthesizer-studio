@@ -1,3 +1,5 @@
+import { useState, useEffect, useCallback } from 'react';
+
 export interface KeyboardShortcut {
   id: string;
   keys: string[];

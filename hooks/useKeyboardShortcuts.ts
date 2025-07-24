@@ -22,7 +22,7 @@ export function useKeyboardShortcuts(
   shortcuts: KeyboardShortcut[] = [],
   options: {
     enabled?: boolean;
-    target?: HTMLElement | Window;
+    target?: HTMLElement | Window | null;
     capture?: boolean;
   } = {}
 ): ShortcutManager {
@@ -68,17 +68,18 @@ export function useKeyboardShortcuts(
   }, [normalizeKey]);
 
   // Handle keydown events
-  const handleKeyDown = useCallback((event: KeyboardEvent) => {
+  const handleKeyDown = useCallback((event: Event) => {
+    const keyboardEvent = event as KeyboardEvent;
     if (!enabledRef.current) return;
 
-    const key = normalizeKey(event.key);
+    const key = normalizeKey(keyboardEvent.key);
     pressedKeysRef.current.add(key);
 
     // Add modifier keys
-    if (event.ctrlKey) pressedKeysRef.current.add('ctrl');
-    if (event.shiftKey) pressedKeysRef.current.add('shift');
-    if (event.altKey) pressedKeysRef.current.add('alt');
-    if (event.metaKey) pressedKeysRef.current.add('cmd');
+    if (keyboardEvent.ctrlKey) pressedKeysRef.current.add('ctrl');
+    if (keyboardEvent.shiftKey) pressedKeysRef.current.add('shift');
+    if (keyboardEvent.altKey) pressedKeysRef.current.add('alt');
+    if (keyboardEvent.metaKey) pressedKeysRef.current.add('cmd');
 
     // Create current key combination
     const currentKeys = Array.from(pressedKeysRef.current).sort();
@@ -90,35 +91,36 @@ export function useKeyboardShortcuts(
     if (shortcut && !shortcut.disabled) {
       // Prevent default behavior if specified
       if (shortcut.preventDefault !== false) {
-        event.preventDefault();
+        keyboardEvent.preventDefault();
       }
 
       // Stop propagation if specified
       if (shortcut.stopPropagation) {
-        event.stopPropagation();
+        keyboardEvent.stopPropagation();
       }
 
       // Execute callback
       try {
-        shortcut.callback(event);
+        shortcut.callback(keyboardEvent);
       } catch (error) {
         console.error('Error executing keyboard shortcut:', shortcut.keys, error);
       }
     }
-  }, []);
+  }, [normalizeKey]);
 
   // Handle keyup events
-  const handleKeyUp = useCallback((event: KeyboardEvent) => {
+  const handleKeyUp = useCallback((event: Event) => {
+    const keyboardEvent = event as KeyboardEvent;
     if (!enabledRef.current) return;
 
-    const key = normalizeKey(event.key);
+    const key = normalizeKey(keyboardEvent.key);
     pressedKeysRef.current.delete(key);
 
     // Remove modifier keys when released
-    if (!event.ctrlKey) pressedKeysRef.current.delete('ctrl');
-    if (!event.shiftKey) pressedKeysRef.current.delete('shift');
-    if (!event.altKey) pressedKeysRef.current.delete('alt');
-    if (!event.metaKey) pressedKeysRef.current.delete('cmd');
+    if (!keyboardEvent.ctrlKey) pressedKeysRef.current.delete('ctrl');
+    if (!keyboardEvent.shiftKey) pressedKeysRef.current.delete('shift');
+    if (!keyboardEvent.altKey) pressedKeysRef.current.delete('alt');
+    if (!keyboardEvent.metaKey) pressedKeysRef.current.delete('cmd');
   }, [normalizeKey]);
 
   // Register a shortcut
@@ -198,13 +200,15 @@ export function useKeyboardShortcuts(
       }
     };
 
-    window.addEventListener('blur', handleBlur);
-    document.addEventListener('visibilitychange', handleVisibilityChange);
+    if (typeof window !== 'undefined') {
+      window.addEventListener('blur', handleBlur);
+      document.addEventListener('visibilitychange', handleVisibilityChange);
 
-    return () => {
-      window.removeEventListener('blur', handleBlur);
-      document.removeEventListener('visibilitychange', handleVisibilityChange);
-    };
+      return () => {
+        window.removeEventListener('blur', handleBlur);
+        document.removeEventListener('visibilitychange', handleVisibilityChange);
+      };
+    }
   }, []);
 
   return {

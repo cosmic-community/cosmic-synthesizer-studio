@@ -1,9 +1,11 @@
+import { useRef, useEffect } from 'react';
+
 export interface AnimationConfig {
   duration: number;
   easing: string;
   delay?: number;
   fill?: 'none' | 'forwards' | 'backwards' | 'both';
-  iterations?: number | 'infinite';
+  iterations?: number;
 }
 
 export interface SpringConfig {
@@ -85,12 +87,19 @@ export class AnimationManager {
     keyframes: Keyframe[],
     options: KeyframeAnimationOptions = {}
   ): Animation {
-    const animation = element.animate(keyframes, {
+    const finalOptions: KeyframeAnimationOptions = {
       duration: durations.normal,
       easing: easings.studioSmooth,
       fill: 'forwards',
       ...options
-    });
+    };
+
+    // Handle iterations property conversion
+    if (typeof finalOptions.iterations === 'string' && finalOptions.iterations === 'infinite') {
+      finalOptions.iterations = Infinity;
+    }
+
+    const animation = element.animate(keyframes, finalOptions);
 
     // Store reference for potential cancellation
     const id = this.generateAnimationId();
@@ -187,7 +196,12 @@ export class AnimationManager {
         break;
     }
 
-    return this.createKeyframes(element, keyframes, config);
+    const finalOptions: KeyframeAnimationOptions = {
+      ...config,
+      iterations: typeof config.iterations === 'string' && config.iterations === 'infinite' ? Infinity : config.iterations
+    };
+
+    return this.createKeyframes(element, keyframes, finalOptions);
   }
 
   // Animate element exit
@@ -264,7 +278,12 @@ export class AnimationManager {
         break;
     }
 
-    return this.createKeyframes(element, keyframes, config);
+    const finalOptions: KeyframeAnimationOptions = {
+      ...config,
+      iterations: typeof config.iterations === 'string' && config.iterations === 'infinite' ? Infinity : config.iterations
+    };
+
+    return this.createKeyframes(element, keyframes, finalOptions);
   }
 
   // Stagger animations for multiple elements

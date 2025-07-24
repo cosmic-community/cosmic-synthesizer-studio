@@ -713,6 +713,3 @@ export class AdvancedAudioProcessor {
     this.spectralAnalyzer.disconnect();
   }
 }
-
-// Export for use in main audio engine
-export { AdvancedAudioProcessor };

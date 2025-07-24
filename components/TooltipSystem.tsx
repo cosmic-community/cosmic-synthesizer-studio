@@ -55,7 +55,7 @@ export default function Tooltip({
     const tooltipWidth = tooltipRect?.width || 200;
     const tooltipHeight = tooltipRect?.height || 40;
 
-    let finalPlacement = placement;
+    let finalPlacement: 'top' | 'bottom' | 'left' | 'right' = placement === 'auto' ? 'top' : placement;
     let x = 0;
     let y = 0;
 
