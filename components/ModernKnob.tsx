@@ -96,7 +96,7 @@ export default function ModernKnob({
     if (typeof val === 'number') {
       return val.toFixed(val < 1 ? 2 : val < 10 ? 1 : 0);
     }
-    return val.toString();
+    return String(val);
   };
 
   return (

@@ -106,7 +106,7 @@ export default function ModernSlider({
     if (typeof val === 'number') {
       return val.toFixed(val < 1 ? 2 : val < 10 ? 1 : 0);
     }
-    return val.toString();
+    return String(val);
   };
 
   const sliderStyle = orientation === 'horizontal' 

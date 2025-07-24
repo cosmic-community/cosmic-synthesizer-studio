@@ -20,9 +20,9 @@ export interface EffectParameter {
 export class ModernReverb {
   private context: AudioContext;
   private input: GainNode;
-  private output: GainNode;
+  public output: GainNode;
   private convolver: ConvolverNode;
-  private earlyReflections: DelayNode[];
+  private earlyReflections: DelayNode[] = [];
   private lateReverb: ConvolverNode;
   private damping: BiquadFilterNode;
   private predelay: DelayNode;
@@ -34,6 +34,7 @@ export class ModernReverb {
     this.convolver = audioContext.createConvolver();
     this.predelay = audioContext.createDelay(0.5);
     this.damping = audioContext.createBiquadFilter();
+    this.lateReverb = audioContext.createConvolver();
     
     this.setupEarlyReflections();
     this.setupLateReverb();
@@ -74,7 +75,6 @@ export class ModernReverb {
       }
     }
     
-    this.lateReverb = this.context.createConvolver();
     this.lateReverb.buffer = impulse;
   }
 
@@ -137,7 +137,7 @@ export class ModernReverb {
 export class ModernDistortion {
   private context: AudioContext;
   private input: GainNode;
-  private output: GainNode;
+  public output: GainNode;
   private waveshaper: WaveShaperNode;
   private preGain: GainNode;
   private postGain: GainNode;
@@ -289,7 +289,7 @@ export class ModernDistortion {
 export class ModernChorus {
   private context: AudioContext;
   private input: GainNode;
-  private output: GainNode;
+  public output: GainNode;
   private delays: DelayNode[];
   private lfos: OscillatorNode[];
   private lfoGains: GainNode[];
