@@ -45,13 +45,13 @@ export default function RecordingControls({ recordingState, onStateChange }: Rec
     try {
       switch (platform) {
         case 'twitter':
-          shareToTwitter(title, url);
+          shareToTwitter(text, url);
           break;
         case 'facebook':
           shareToFacebook(url);
           break;
         case 'native':
-          await shareViaWebAPI(title, text, url);
+          await shareViaWebAPI({ title, text, url });
           break;
       }
     } catch (error) {
