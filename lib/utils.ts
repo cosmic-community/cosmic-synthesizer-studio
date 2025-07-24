@@ -95,7 +95,7 @@ export function shareToFacebook(url: string): void {
 
 export function shareViaWebAPI(title: string, text: string, url?: string): Promise<void> {
   // Fix: Add proper null checks for navigator and navigator.share
-  if (typeof navigator !== 'undefined' && navigator && navigator.share) {
+  if (typeof navigator !== 'undefined' && navigator?.share) {
     return navigator.share({
       title,
       text,
