@@ -10,6 +10,7 @@ export const cosmic = createBucketClient({
   bucketSlug,
   readKey: process.env.COSMIC_READ_KEY || '',
   writeKey: process.env.COSMIC_WRITE_KEY || '',
+  apiEnvironment: "staging"
 });
 
 // Simple error helper for Cosmic SDK
