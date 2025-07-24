@@ -1,0 +1,323 @@
+'use client';
+
+import { useState, useEffect, useRef } from 'react';
+import { AudioEngine } from '@/lib/audioEngine';
+import { SynthState, RecordingState, DrumSequencerState } from '@/types';
+import SynthControls from '@/components/SynthControls';
+import EffectsRack from '@/components/EffectsRack';
+import PianoKeyboard from '@/components/PianoKeyboard';
+import DrumSequencer from '@/components/DrumSequencer';
+import RecordingControls from '@/components/RecordingControls';
+import AudioVisualizer from '@/components/AudioVisualizer';
+import PresetManager from '@/components/PresetManager';
+import { Play, Square, Save, Settings } from 'lucide-react';
+
+const defaultSynthState: SynthState = {
+  oscillatorType: 'sawtooth',
+  filterCutoff: 1000,
+  filterResonance: 1,
+  attack: 0.1,
+  decay: 0.3,
+  sustain: 0.7,
+  release: 0.5,
+  volume: 0.5,
+  effects: {
+    reverb: { active: false, amount: 0.3 },
+    delay: { active: false, time: 0.25, feedback: 0.3 },
+    distortion: { active: false, amount: 50 },
+    chorus: { active: false, rate: 1, depth: 0.5 }
+  }
+};
+
+const defaultRecordingState: RecordingState = {
+  isRecording: false,
+  isPlaying: false,
+  duration: 0,
+  audioBuffer: null,
+  waveformData: []
+};
+
+const defaultDrumState: DrumSequencerState = {
+  isPlaying: false,
+  currentStep: 0,
+  bpm: 128,
+  pattern: Array(8).fill(null).map(() => Array(16).fill(false)),
+  selectedSound: 0,
+  sounds: [
+    { name: 'Kick', type: 'kick', frequency: 60, decay: 0.5 },
+    { name: 'Snare', type: 'snare', frequency: 200, decay: 0.2 },
+    { name: 'Hi-Hat', type: 'hihat', frequency: 8000, decay: 0.1 },
+    { name: 'Open Hat', type: 'openhat', frequency: 9000, decay: 0.3 },
+    { name: 'Crash', type: 'crash', frequency: 5000, decay: 0.8 },
+    { name: 'Ride', type: 'ride', frequency: 3000, decay: 0.6 },
+    { name: 'Tom 1', type: 'kick', frequency: 100, decay: 0.3 },
+    { name: 'Tom 2', type: 'kick', frequency: 80, decay: 0.35 }
+  ]
+};
+
+export default function SynthesizerStudio() {
+  const [synthState, setSynthState] = useState<SynthState>(defaultSynthState);
+  const [recordingState, setRecordingState] = useState<RecordingState>(defaultRecordingState);
+  const [drumState, setDrumState] = useState<DrumSequencerState>(defaultDrumState);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [showPresets, setShowPresets] = useState(false);
+
+  const audioEngineRef = useRef<AudioEngine | null>(null);
+  const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize audio engine
+  useEffect(() => {
+    const initAudio = async () => {
+      try {
+        audioEngineRef.current = new AudioEngine();
+        await audioEngineRef.current.resume();
+        setIsLoading(false);
+      } catch (err) {
+        setError('Failed to initialize audio engine. Please check your browser compatibility.');
+        setIsLoading(false);
+      }
+    };
+
+    initAudio();
+
+    return () => {
+      if (audioEngineRef.current) {
+        audioEngineRef.current.destroy();
+      }
+      if (drumIntervalRef.current) {
+        clearInterval(drumIntervalRef.current);
+      }
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
+    };
+  }, []);
+
+  // Handle key press for piano
+  const handleKeyPress = (frequency: number) => {
+    if (audioEngineRef.current) {
+      audioEngineRef.current.playNote(frequency, synthState);
+    }
+  };
+
+  const handleKeyRelease = (frequency: number) => {
+    if (audioEngineRef.current) {
+      audioEngineRef.current.stopNote(frequency);
+    }
+  };
+
+  // Handle drum sequencer
+  const toggleDrumSequencer = () => {
+    if (drumState.isPlaying) {
+      if (drumIntervalRef.current) {
+        clearInterval(drumIntervalRef.current);
+        drumIntervalRef.current = null;
+      }
+      setDrumState(prev => ({ ...prev, isPlaying: false, currentStep: 0 }));
+    } else {
+      const stepTime = (60 / drumState.bpm / 4) * 1000; // 16th notes
+      drumIntervalRef.current = setInterval(() => {
+        setDrumState(prev => {
+          const nextStep = (prev.currentStep + 1) % 16;
+          
+          // Play sounds for current step
+          if (audioEngineRef.current) {
+            prev.pattern.forEach((track, soundIndex) => {
+              if (track[prev.currentStep]) {
+                audioEngineRef.current!.playDrumSound(prev.sounds[soundIndex]);
+              }
+            });
+          }
+          
+          return { ...prev, currentStep: nextStep };
+        });
+      }, stepTime);
+      
+      setDrumState(prev => ({ ...prev, isPlaying: true }));
+    }
+  };
+
+  // Handle recording
+  const toggleRecording = async () => {
+    if (!audioEngineRef.current) return;
+
+    if (recordingState.isRecording) {
+      // Stop recording
+      try {
+        const audioBlob = await audioEngineRef.current.stopRecording();
+        if (recordingTimerRef.current) {
+          clearInterval(recordingTimerRef.current);
+        }
+        
+        setRecordingState(prev => ({
+          ...prev,
+          isRecording: false,
+          audioBuffer: null // We'd need to convert blob to AudioBuffer for playback
+        }));
+      } catch (err) {
+        setError('Failed to stop recording');
+      }
+    } else {
+      // Start recording
+      try {
+        audioEngineRef.current.startRecording();
+        setRecordingState(prev => ({ ...prev, isRecording: true, duration: 0 }));
+        
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingState(prev => ({ ...prev, duration: prev.duration + 0.1 }));
+        }, 100);
+      } catch (err) {
+        setError('Failed to start recording');
+      }
+    }
+  };
+
+  // Handle preset loading
+  const handleLoadPreset = (preset: any) => {
+    setSynthState({
+      oscillatorType: preset.metadata.oscillator_type || 'sawtooth',
+      filterCutoff: preset.metadata.filter_cutoff || 1000,
+      filterResonance: preset.metadata.filter_resonance || 1,
+      attack: preset.metadata.envelope_attack || 0.1,
+      decay: preset.metadata.envelope_decay || 0.3,
+      sustain: preset.metadata.envelope_sustain || 0.7,
+      release: preset.metadata.envelope_release || 0.5,
+      volume: 0.5,
+      effects: {
+        reverb: { 
+          active: preset.metadata.effects?.includes('reverb') || false, 
+          amount: preset.metadata.reverb_amount || 0.3 
+        },
+        delay: { 
+          active: preset.metadata.effects?.includes('delay') || false, 
+          time: preset.metadata.delay_time || 0.25, 
+          feedback: preset.metadata.delay_feedback || 0.3 
+        },
+        distortion: { 
+          active: preset.metadata.effects?.includes('distortion') || false, 
+          amount: preset.metadata.distortion_amount || 50 
+        },
+        chorus: { 
+          active: preset.metadata.effects?.includes('chorus') || false, 
+          rate: preset.metadata.chorus_rate || 1, 
+          depth: preset.metadata.chorus_depth || 0.5 
+        }
+      }
+    });
+    setShowPresets(false);
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-synth-control border-t-synth-accent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-synth-accent">Initializing Audio Engine...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center p-8 bg-synth-panel rounded-lg">
+        <p className="text-synth-warning mb-4">{error}</p>
+        <button 
+          onClick={() => window.location.reload()} 
+          className="synth-button"
+        >
+          Reload Page
+        </button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      {/* Header Controls */}
+      <div className="bg-synth-panel p-4 rounded-lg">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={toggleDrumSequencer}
+              className={`synth-button flex items-center gap-2 ${drumState.isPlaying ? 'active' : ''}`}
+            >
+              {drumState.isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+              {drumState.isPlaying ? 'Stop' : 'Play'} Drums
+            </button>
+            
+            <button
+              onClick={toggleRecording}
+              className={`synth-button flex items-center gap-2 ${recordingState.isRecording ? 'active glow-warning' : ''}`}
+            >
+              <div className={`w-3 h-3 rounded-full ${recordingState.isRecording ? 'bg-red-500 recording-indicator' : 'bg-gray-500'}`} />
+              {recordingState.isRecording ? `Recording ${recordingState.duration.toFixed(1)}s` : 'Record'}
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowPresets(!showPresets)}
+              className="synth-button flex items-center gap-2"
+            >
+              <Save className="w-4 h-4" />
+              Presets
+            </button>
+            
+            <button className="synth-button flex items-center gap-2">
+              <Settings className="w-4 h-4" />
+              Settings
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {/* Audio Visualizer */}
+      <AudioVisualizer audioEngine={audioEngineRef.current} />
+
+      {/* Main Studio Interface */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left Column - Synthesizer Controls */}
+        <div className="space-y-6">
+          <SynthControls 
+            synthState={synthState} 
+            onStateChange={setSynthState} 
+          />
+          <EffectsRack 
+            synthState={synthState} 
+            onStateChange={setSynthState} 
+          />
+        </div>
+
+        {/* Right Column - Sequencer and Recording */}
+        <div className="space-y-6">
+          <DrumSequencer 
+            drumState={drumState} 
+            onStateChange={setDrumState} 
+          />
+          <RecordingControls 
+            recordingState={recordingState}
+            onStateChange={setRecordingState}
+          />
+        </div>
+      </div>
+
+      {/* Piano Keyboard */}
+      <PianoKeyboard 
+        onKeyPress={handleKeyPress}
+        onKeyRelease={handleKeyRelease}
+      />
+
+      {/* Preset Manager Modal */}
+      {showPresets && (
+        <PresetManager 
+          onClose={() => setShowPresets(false)}
+          onLoadPreset={handleLoadPreset}
+          currentState={synthState}
+        />
+      )}
+    </div>
+  );
+}

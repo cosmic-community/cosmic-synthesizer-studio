@@ -1,0 +1,164 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 220 13% 5%;
+    --foreground: 210 40% 98%;
+    --primary: 142 76% 36%;
+    --primary-foreground: 355 7% 97%;
+    --secondary: 215 27% 17%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 215 27% 17%;
+    --muted-foreground: 217 10% 64%;
+    --accent: 215 27% 17%;
+    --accent-foreground: 210 40% 98%;
+    --border: 215 27% 17%;
+    --input: 215 27% 17%;
+    --ring: 142 76% 36%;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  html {
+    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+}
+
+@layer components {
+  .synth-knob {
+    @apply relative w-16 h-16 bg-synth-control rounded-full border-2 border-gray-600 cursor-pointer transition-all duration-200 hover:border-synth-accent;
+  }
+
+  .synth-knob::before {
+    content: '';
+    @apply absolute top-1 left-1/2 w-1 h-6 bg-synth-accent rounded-full transform -translate-x-1/2;
+    transform-origin: center bottom;
+  }
+
+  .synth-button {
+    @apply px-4 py-2 bg-synth-control border border-gray-600 rounded-md text-white hover:bg-synth-accent hover:text-black transition-all duration-200 active:scale-95;
+  }
+
+  .synth-button.active {
+    @apply bg-synth-accent text-black border-synth-accent shadow-lg shadow-synth-accent/30;
+  }
+
+  .synth-slider {
+    @apply appearance-none w-full h-2 bg-synth-control rounded-lg outline-none;
+  }
+
+  .synth-slider::-webkit-slider-thumb {
+    @apply appearance-none w-4 h-4 bg-synth-accent rounded-full cursor-pointer;
+  }
+
+  .synth-slider::-moz-range-thumb {
+    @apply w-4 h-4 bg-synth-accent rounded-full cursor-pointer border-0;
+  }
+
+  .drum-pad {
+    @apply w-16 h-16 bg-synth-control border-2 border-gray-600 rounded-lg cursor-pointer transition-all duration-100 hover:border-synth-accent active:bg-synth-accent active:scale-95;
+  }
+
+  .drum-pad.active {
+    @apply bg-synth-accent border-synth-accent shadow-lg shadow-synth-accent/50;
+  }
+
+  .waveform-bar {
+    @apply bg-synth-accent transition-all duration-75 ease-out;
+  }
+
+  .piano-key {
+    @apply transition-all duration-75 cursor-pointer select-none;
+  }
+
+  .piano-key.white {
+    @apply bg-white border border-gray-300 hover:bg-gray-100 active:bg-gray-200;
+  }
+
+  .piano-key.black {
+    @apply bg-gray-900 hover:bg-gray-800 active:bg-gray-700;
+  }
+
+  .cosmic-button {
+    background-color: #11171A;
+    color: white;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+  }
+
+  .cosmic-button:hover {
+    background-color: #1a2326;
+  }
+}
+
+@layer utilities {
+  .text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  .glass-effect {
+    @apply backdrop-blur-sm bg-white/10 border border-white/20;
+  }
+
+  .glow-accent {
+    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+  }
+
+  .glow-warning {
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-synth-panel;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-synth-control rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-synth-accent;
+}
+
+/* Animations */
+@keyframes pulse-recording {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.recording-indicator {
+  animation: pulse-recording 1s ease-in-out infinite;
+}
+
+/* Audio visualization */
+.visualizer-bar {
+  @apply bg-gradient-to-t from-synth-accent to-synth-info;
+  animation: visualizer-pulse 0.1s ease-out;
+}
+
+@keyframes visualizer-pulse {
+  0% { transform: scaleY(0.5); }
+  100% { transform: scaleY(1); }
+}
