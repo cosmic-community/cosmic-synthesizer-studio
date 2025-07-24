@@ -83,7 +83,6 @@ export function useAudioAnalyzer(
     const nyquist = sampleRate / 2;
     const binWidth = nyquist / frequencyData.length;
     
-    let magnitude = 0;
     let weightedSum = 0;
     let totalMagnitude = 0;
     
