@@ -67,20 +67,20 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
 
   // Keyboard shortcuts
   useEffect(() => {
-    const keyMap: { [key: string]: Key } = {
-      'a': keys.find(k => k.note === 'C' && k.octave === 4)!,
-      'w': keys.find(k => k.note === 'C#' && k.octave === 4)!,
-      's': keys.find(k => k.note === 'D' && k.octave === 4)!,
-      'e': keys.find(k => k.note === 'D#' && k.octave === 4)!,
-      'd': keys.find(k => k.note === 'E' && k.octave === 4)!,
-      'f': keys.find(k => k.note === 'F' && k.octave === 4)!,
-      't': keys.find(k => k.note === 'F#' && k.octave === 4)!,
-      'g': keys.find(k => k.note === 'G' && k.octave === 4)!,
-      'y': keys.find(k => k.note === 'G#' && k.octave === 4)!,
-      'h': keys.find(k => k.note === 'A' && k.octave === 4)!,
-      'u': keys.find(k => k.note === 'A#' && k.octave === 4)!,
-      'j': keys.find(k => k.note === 'B' && k.octave === 4)!,
-      'k': keys.find(k => k.note === 'C' && k.octave === 5)!,
+    const keyMap: { [key: string]: Key | undefined } = {
+      'a': keys.find(k => k.note === 'C' && k.octave === 4),
+      'w': keys.find(k => k.note === 'C#' && k.octave === 4),
+      's': keys.find(k => k.note === 'D' && k.octave === 4),
+      'e': keys.find(k => k.note === 'D#' && k.octave === 4),
+      'd': keys.find(k => k.note === 'E' && k.octave === 4),
+      'f': keys.find(k => k.note === 'F' && k.octave === 4),
+      't': keys.find(k => k.note === 'F#' && k.octave === 4),
+      'g': keys.find(k => k.note === 'G' && k.octave === 4),
+      'y': keys.find(k => k.note === 'G#' && k.octave === 4),
+      'h': keys.find(k => k.note === 'A' && k.octave === 4),
+      'u': keys.find(k => k.note === 'A#' && k.octave === 4),
+      'j': keys.find(k => k.note === 'B' && k.octave === 4),
+      'k': keys.find(k => k.note === 'C' && k.octave === 5),
     };
 
     const handleKeyboardDown = (e: KeyboardEvent) => {
@@ -160,7 +160,7 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
                     ? 'bg-synth-accent border-synth-accent transform scale-95' 
                     : 'bg-gray-900 hover:bg-gray-800'
                 }`}
-                style={{ left: `${leftPosition * whiteKeyWidth}%` }}
+                style={{ left: leftPosition !== undefined ? `${leftPosition * whiteKeyWidth}%` : '0%' }}
                 onMouseDown={() => handleKeyDown(key)}
                 onMouseUp={() => handleKeyUp(key)}
                 onMouseLeave={() => handleKeyUp(key)}

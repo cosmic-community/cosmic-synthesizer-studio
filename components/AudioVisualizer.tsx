@@ -41,7 +41,7 @@ export default function AudioVisualizer({ audioEngine }: AudioVisualizerProps) {
       ctx.fillStyle = gradient;
       
       for (let i = 0; i < normalizedData.length; i++) {
-        const barHeight = normalizedData[i] * canvas.height;
+        const barHeight = normalizedData[i] ? normalizedData[i] * canvas.height : 0;
         const x = i * barWidth;
         const y = canvas.height - barHeight;
         
@@ -58,7 +58,7 @@ export default function AudioVisualizer({ audioEngine }: AudioVisualizerProps) {
       
       for (let i = 0; i < normalizedData.length; i++) {
         const v = normalizedData[i];
-        const y = (v * canvas.height) / 2;
+        const y = v ? (v * canvas.height) / 2 : canvas.height / 2;
         
         if (i === 0) {
           ctx.moveTo(x, y);

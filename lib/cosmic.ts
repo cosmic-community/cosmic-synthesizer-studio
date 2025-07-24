@@ -1,8 +1,13 @@
 import { createBucketClient } from '@cosmicjs/sdk';
 import { SynthPreset, Recording, DrumPattern, CosmicResponse } from '@/types';
 
+const bucketSlug = process.env.COSMIC_BUCKET_SLUG;
+if (!bucketSlug) {
+  throw new Error('COSMIC_BUCKET_SLUG environment variable is required');
+}
+
 export const cosmic = createBucketClient({
-  bucketSlug: process.env.COSMIC_BUCKET_SLUG as string,
+  bucketSlug,
   readKey: process.env.COSMIC_READ_KEY,
   writeKey: process.env.COSMIC_WRITE_KEY,
 });

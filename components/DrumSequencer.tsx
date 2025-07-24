@@ -14,9 +14,13 @@ export default function DrumSequencer({ drumState, onStateChange }: DrumSequence
   };
 
   const toggleStep = (soundIndex: number, stepIndex: number) => {
+    if (!drumState.pattern || !drumState.pattern[soundIndex]) return;
+    
     const newPattern = [...drumState.pattern];
-    newPattern[soundIndex][stepIndex] = !newPattern[soundIndex][stepIndex];
-    updateState({ pattern: newPattern });
+    if (newPattern[soundIndex] && newPattern[soundIndex][stepIndex] !== undefined) {
+      newPattern[soundIndex][stepIndex] = !newPattern[soundIndex][stepIndex];
+      updateState({ pattern: newPattern });
+    }
   };
 
   const clearPattern = () => {
@@ -89,10 +93,10 @@ export default function DrumSequencer({ drumState, onStateChange }: DrumSequence
 
       {/* Drum patterns */}
       <div className="space-y-2">
-        {drumState.sounds.map((sound, soundIndex) => (
+        {drumState.sounds?.map((sound, soundIndex) => (
           <div key={soundIndex} className="flex items-center gap-2">
             <div className="w-20 text-sm font-medium text-gray-300 truncate">
-              {sound.name}
+              {sound?.name || `Sound ${soundIndex + 1}`}
             </div>
             
             <div className="grid grid-cols-16 gap-1 flex-1">
@@ -101,7 +105,7 @@ export default function DrumSequencer({ drumState, onStateChange }: DrumSequence
                   key={stepIndex}
                   onClick={() => toggleStep(soundIndex, stepIndex)}
                   className={`drum-pad w-6 h-6 ${
-                    drumState.pattern[soundIndex][stepIndex] ? 'active' : ''
+                    drumState.pattern?.[soundIndex]?.[stepIndex] ? 'active' : ''
                   } ${
                     drumState.currentStep === stepIndex ? 'ring-2 ring-synth-info' : ''
                   }`}

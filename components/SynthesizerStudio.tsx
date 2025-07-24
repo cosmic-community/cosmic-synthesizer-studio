@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AudioEngine } from '@/lib/audioEngine';
-import { SynthState, RecordingState, DrumSequencerState } from '@/types';
+import { SynthState, RecordingState, DrumSequencerState, DrumSound } from '@/types';
 import SynthControls from '@/components/SynthControls';
 import EffectsRack from '@/components/EffectsRack';
 import PianoKeyboard from '@/components/PianoKeyboard';
@@ -124,9 +124,12 @@ export default function SynthesizerStudio() {
           
           // Play sounds for current step
           if (audioEngineRef.current) {
-            prev.pattern.forEach((track, soundIndex) => {
-              if (track[prev.currentStep]) {
-                audioEngineRef.current!.playDrumSound(prev.sounds[soundIndex]);
+            prev.pattern?.forEach((track, soundIndex) => {
+              if (track?.[prev.currentStep] && prev.sounds?.[soundIndex]) {
+                const sound = prev.sounds[soundIndex];
+                if (sound) {
+                  audioEngineRef.current!.playDrumSound(sound);
+                }
               }
             });
           }
@@ -177,32 +180,32 @@ export default function SynthesizerStudio() {
   // Handle preset loading
   const handleLoadPreset = (preset: any) => {
     setSynthState({
-      oscillatorType: preset.metadata.oscillator_type || 'sawtooth',
-      filterCutoff: preset.metadata.filter_cutoff || 1000,
-      filterResonance: preset.metadata.filter_resonance || 1,
-      attack: preset.metadata.envelope_attack || 0.1,
-      decay: preset.metadata.envelope_decay || 0.3,
-      sustain: preset.metadata.envelope_sustain || 0.7,
-      release: preset.metadata.envelope_release || 0.5,
+      oscillatorType: preset.metadata?.oscillator_type || 'sawtooth',
+      filterCutoff: preset.metadata?.filter_cutoff || 1000,
+      filterResonance: preset.metadata?.filter_resonance || 1,
+      attack: preset.metadata?.envelope_attack || 0.1,
+      decay: preset.metadata?.envelope_decay || 0.3,
+      sustain: preset.metadata?.envelope_sustain || 0.7,
+      release: preset.metadata?.envelope_release || 0.5,
       volume: 0.5,
       effects: {
         reverb: { 
-          active: preset.metadata.effects?.includes('reverb') || false, 
-          amount: preset.metadata.reverb_amount || 0.3 
+          active: preset.metadata?.effects?.includes('reverb') || false, 
+          amount: preset.metadata?.reverb_amount || 0.3 
         },
         delay: { 
-          active: preset.metadata.effects?.includes('delay') || false, 
-          time: preset.metadata.delay_time || 0.25, 
-          feedback: preset.metadata.delay_feedback || 0.3 
+          active: preset.metadata?.effects?.includes('delay') || false, 
+          time: preset.metadata?.delay_time || 0.25, 
+          feedback: preset.metadata?.delay_feedback || 0.3 
         },
         distortion: { 
-          active: preset.metadata.effects?.includes('distortion') || false, 
-          amount: preset.metadata.distortion_amount || 50 
+          active: preset.metadata?.effects?.includes('distortion') || false, 
+          amount: preset.metadata?.distortion_amount || 50 
         },
         chorus: { 
-          active: preset.metadata.effects?.includes('chorus') || false, 
-          rate: preset.metadata.chorus_rate || 1, 
-          depth: preset.metadata.chorus_depth || 0.5 
+          active: preset.metadata?.effects?.includes('chorus') || false, 
+          rate: preset.metadata?.chorus_rate || 1, 
+          depth: preset.metadata?.chorus_depth || 0.5 
         }
       }
     });
