@@ -21,8 +21,7 @@ export function noteToFrequency(note: string, octave: number): number {
     'B': 493.88
   };
 
-  const baseFrequency = noteFrequencies[note];
-  if (!baseFrequency) return 440; // Default to A4
+  const baseFrequency = noteFrequencies[note] ?? 440; // Default to A4 if note not found
 
   // Adjust for octave (A4 = 440Hz is octave 4)
   const octaveMultiplier = Math.pow(2, octave - 4);
@@ -38,7 +37,7 @@ export function frequencyToNote(frequency: number): { note: string; octave: numb
     const octave = Math.floor(h / 12);
     const n = h % 12;
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    return { note: notes[n] || 'A', octave };
+    return { note: notes[n] ?? 'A', octave };
   }
   
   return { note: 'A', octave: 4 };
