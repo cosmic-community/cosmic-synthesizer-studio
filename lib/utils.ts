@@ -37,7 +37,8 @@ export function frequencyToNote(frequency: number): { note: string; octave: numb
     const octave = Math.floor(h / 12);
     const n = h % 12;
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const note = (n >= 0 && n < notes.length && notes[n]) ? notes[n] : 'A';
+    // Fix: Add bounds check and safe array access
+    const note = (n >= 0 && n < notes.length && notes[n] !== undefined) ? notes[n] : 'A';
     return { note, octave };
   }
   
@@ -48,7 +49,13 @@ export function frequencyToNote(frequency: number): { note: string; octave: numb
 export function normalizeAudioData(data: Uint8Array): number[] {
   const normalized = new Array(data.length);
   for (let i = 0; i < data.length; i++) {
-    normalized[i] = data[i] / 255;
+    // Fix: Add safe array access check
+    const value = data[i];
+    if (value !== undefined) {
+      normalized[i] = value / 255;
+    } else {
+      normalized[i] = 0; // Default value for undefined elements
+    }
   }
   return normalized;
 }
@@ -56,7 +63,11 @@ export function normalizeAudioData(data: Uint8Array): number[] {
 export function calculateRMS(data: number[]): number {
   let sum = 0;
   for (let i = 0; i < data.length; i++) {
-    sum += data[i] * data[i];
+    // Fix: Add safe array access check
+    const value = data[i];
+    if (value !== undefined) {
+      sum += value * value;
+    }
   }
   return Math.sqrt(sum / data.length);
 }
