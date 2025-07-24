@@ -16,7 +16,8 @@
     "react-dom": "^18.2.0",
     "@cosmicjs/sdk": "^1.5.5",
     "lucide-react": "^0.263.1",
-    "clsx": "^2.1.0"
+    "clsx": "^2.1.0",
+    "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
     "@types/node": "^20.0.0",

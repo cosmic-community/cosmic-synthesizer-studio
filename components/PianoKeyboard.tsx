@@ -25,21 +25,23 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
     
     for (let octave = 4; octave <= 5; octave++) {
       for (const note of notes) {
+        const frequency = noteToFrequency(note, octave);
         keys.push({
           note,
           octave,
           isBlack: note.includes('#'),
-          frequency: noteToFrequency(note, octave)
+          frequency
         });
       }
     }
     
     // Add C6
+    const c6Frequency = noteToFrequency('C', 6);
     keys.push({
       note: 'C',
       octave: 6,
       isBlack: false,
-      frequency: noteToFrequency('C', 6)
+      frequency: c6Frequency
     });
     
     return keys;
@@ -150,7 +152,7 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
             // Calculate position for black keys
             const whiteKeyWidth = 100 / keys.filter(k => !k.isBlack).length;
             const blackKeyPositions = [0.7, 1.7, 3.7, 4.7, 5.7, 7.7, 8.7, 10.7, 11.7, 12.7, 14.7, 15.7, 17.7, 18.7, 20.7, 21.7, 22.7];
-            const leftPosition = blackKeyPositions[index];
+            const leftPosition = blackKeyPositions[index] ?? 0;
             
             return (
               <button
@@ -160,7 +162,7 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
                     ? 'bg-synth-accent border-synth-accent transform scale-95' 
                     : 'bg-gray-900 hover:bg-gray-800'
                 }`}
-                style={{ left: leftPosition !== undefined ? `${leftPosition * whiteKeyWidth}%` : '0%' }}
+                style={{ left: `${leftPosition * whiteKeyWidth}%` }}
                 onMouseDown={() => handleKeyDown(key)}
                 onMouseUp={() => handleKeyUp(key)}
                 onMouseLeave={() => handleKeyUp(key)}

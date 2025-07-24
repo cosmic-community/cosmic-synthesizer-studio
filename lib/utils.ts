@@ -11,6 +11,12 @@ export function formatDuration(seconds: number): string {
   return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
 }
 
+export function formatTime(seconds: number): string {
+  const minutes = Math.floor(seconds / 60)
+  const remainingSeconds = Math.floor(seconds % 60)
+  return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`
+}
+
 export function formatFileSize(bytes: number): string {
   if (bytes === 0) return '0 Bytes'
   const k = 1024
@@ -70,24 +76,80 @@ export function frequencyToNote(frequency: number): string | null {
   return noteNames[n] ? `${noteNames[n]}${octave}` : null
 }
 
-export function noteToFrequency(note: string): number | null {
-  if (!note || typeof note !== 'string') return null
+export function noteToFrequency(note: string, octave?: number): number {
+  if (!note || typeof note !== 'string') return 0
   
+  // If octave is provided as separate parameter
+  if (typeof octave === 'number') {
+    const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
+    const noteIndex = noteNames.indexOf(note)
+    
+    if (noteIndex === -1) return 0
+    
+    const A4 = 440
+    const C0 = A4 * Math.pow(2, -4.75)
+    const h = octave * 12 + noteIndex
+    
+    return C0 * Math.pow(2, h / 12)
+  }
+  
+  // Parse note with octave from string (e.g., "C4")
   const noteMatch = note.match(/^([A-G]#?)([0-9])$/)
-  if (!noteMatch) return null
+  if (!noteMatch) return 0
   
   const [, noteName, octaveStr] = noteMatch
-  if (!noteName || !octaveStr) return null
+  if (!noteName || !octaveStr) return 0
   
   const noteNames = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B']
   const noteIndex = noteNames.indexOf(noteName)
-  const octave = parseInt(octaveStr, 10)
+  const parsedOctave = parseInt(octaveStr, 10)
   
-  if (noteIndex === -1 || isNaN(octave)) return null
+  if (noteIndex === -1 || isNaN(parsedOctave)) return 0
   
   const A4 = 440
   const C0 = A4 * Math.pow(2, -4.75)
-  const h = octave * 12 + noteIndex
+  const h = parsedOctave * 12 + noteIndex
   
   return C0 * Math.pow(2, h / 12)
+}
+
+// Audio visualization utility
+export function normalizeAudioData(dataArray: Uint8Array): number[] {
+  const normalized: number[] = []
+  for (let i = 0; i < dataArray.length; i++) {
+    normalized[i] = dataArray[i] / 255
+  }
+  return normalized
+}
+
+// Social sharing utilities
+export function shareToTwitter(text: string, url?: string): void {
+  const twitterUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}${url ? `&url=${encodeURIComponent(url)}` : ''}`
+  window.open(twitterUrl, '_blank', 'width=550,height=420')
+}
+
+export function shareToFacebook(url: string): void {
+  const facebookUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`
+  window.open(facebookUrl, '_blank', 'width=580,height=296')
+}
+
+export function shareViaWebAPI(shareData: ShareData): Promise<void> {
+  if (navigator.share) {
+    return navigator.share(shareData)
+  } else {
+    // Fallback for browsers that don't support Web Share API
+    return Promise.reject(new Error('Web Share API not supported'))
+  }
+}
+
+// File download utility
+export function downloadBlob(blob: Blob, filename: string): void {
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
 }
