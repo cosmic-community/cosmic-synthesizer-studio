@@ -37,8 +37,8 @@ export function frequencyToNote(frequency: number): { note: string; octave: numb
     const octave = Math.floor(h / 12);
     const n = h % 12;
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    const note = notes[n];
-    // Fix: Add proper null check for array access
+    // Fix: Add proper bounds checking and null safety for array access
+    const note = (n >= 0 && n < notes.length) ? notes[n] : 'A';
     return { note: note ?? 'A', octave };
   }
   
@@ -95,8 +95,8 @@ export function shareToFacebook(url: string): void {
 }
 
 export function shareViaWebAPI(title: string, text: string, url?: string): Promise<void> {
-  // Fix: Add proper null check for navigator.share
-  if (navigator.share && typeof navigator.share === 'function') {
+  // Fix: Add proper null checks for navigator and navigator.share
+  if (typeof navigator !== 'undefined' && navigator.share && typeof navigator.share === 'function') {
     return navigator.share({
       title,
       text,
