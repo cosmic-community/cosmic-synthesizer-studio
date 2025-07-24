@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { AudioEngine } from '@/lib/audioEngine';
+import { isCosmicConfigured } from '@/lib/cosmic';
 import { SynthState, RecordingState, DrumSequencerState, DrumSound } from '@/types';
 import SynthControls from '@/components/SynthControls';
 import EffectsRack from '@/components/EffectsRack';
@@ -10,7 +11,7 @@ import DrumSequencer from '@/components/DrumSequencer';
 import RecordingControls from '@/components/RecordingControls';
 import AudioVisualizer from '@/components/AudioVisualizer';
 import PresetManager from '@/components/PresetManager';
-import { Play, Square, Save, Settings } from 'lucide-react';
+import { Play, Square, Save, Settings, AlertTriangle } from 'lucide-react';
 
 const defaultSynthState: SynthState = {
   oscillatorType: 'sawtooth',
@@ -62,6 +63,7 @@ export default function SynthesizerStudio() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPresets, setShowPresets] = useState(false);
+  const [showCosmicWarning, setShowCosmicWarning] = useState(!isCosmicConfigured);
 
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -72,10 +74,13 @@ export default function SynthesizerStudio() {
     const initAudio = async () => {
       try {
         audioEngineRef.current = new AudioEngine();
+        await audioEngineRef.current.init();
         await audioEngineRef.current.resume();
         setIsLoading(false);
+        setError(null);
       } catch (err) {
-        setError('Failed to initialize audio engine. Please check your browser compatibility.');
+        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+        setError(`Failed to initialize audio engine: ${errorMessage}`);
         setIsLoading(false);
       }
     };
@@ -97,19 +102,24 @@ export default function SynthesizerStudio() {
 
   // Handle key press for piano
   const handleKeyPress = (frequency: number) => {
-    if (audioEngineRef.current) {
+    if (audioEngineRef.current && audioEngineRef.current.initialized) {
       audioEngineRef.current.playNote(frequency, synthState);
     }
   };
 
   const handleKeyRelease = (frequency: number) => {
-    if (audioEngineRef.current) {
+    if (audioEngineRef.current && audioEngineRef.current.initialized) {
       audioEngineRef.current.stopNote(frequency);
     }
   };
 
   // Handle drum sequencer
   const toggleDrumSequencer = () => {
+    if (!audioEngineRef.current || !audioEngineRef.current.initialized) {
+      setError('Audio engine not ready');
+      return;
+    }
+
     if (drumState.isPlaying) {
       if (drumIntervalRef.current) {
         clearInterval(drumIntervalRef.current);
@@ -123,7 +133,7 @@ export default function SynthesizerStudio() {
           const nextStep = (prev.currentStep + 1) % 16;
           
           // Play sounds for current step
-          if (audioEngineRef.current) {
+          if (audioEngineRef.current && audioEngineRef.current.initialized) {
             prev.pattern?.forEach((track, soundIndex) => {
               if (track?.[prev.currentStep] && prev.sounds?.[soundIndex]) {
                 const sound = prev.sounds[soundIndex];
@@ -144,7 +154,10 @@ export default function SynthesizerStudio() {
 
   // Handle recording
   const toggleRecording = async () => {
-    if (!audioEngineRef.current) return;
+    if (!audioEngineRef.current || !audioEngineRef.current.initialized) {
+      setError('Audio engine not ready');
+      return;
+    }
 
     if (recordingState.isRecording) {
       // Stop recording
@@ -212,6 +225,27 @@ export default function SynthesizerStudio() {
     setShowPresets(false);
   };
 
+  // Retry audio initialization
+  const retryAudioInit = async () => {
+    setIsLoading(true);
+    setError(null);
+    
+    try {
+      if (audioEngineRef.current) {
+        audioEngineRef.current.destroy();
+      }
+      
+      audioEngineRef.current = new AudioEngine();
+      await audioEngineRef.current.init();
+      await audioEngineRef.current.resume();
+      setIsLoading(false);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      setError(`Failed to initialize audio engine: ${errorMessage}`);
+      setIsLoading(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -226,19 +260,59 @@ export default function SynthesizerStudio() {
   if (error) {
     return (
       <div className="text-center p-8 bg-synth-panel rounded-lg">
-        <p className="text-synth-warning mb-4">{error}</p>
-        <button 
-          onClick={() => window.location.reload()} 
-          className="synth-button"
-        >
-          Reload Page
-        </button>
+        <AlertTriangle className="w-16 h-16 text-synth-warning mx-auto mb-4" />
+        <h2 className="text-xl font-bold text-white mb-2">Audio Engine Error</h2>
+        <p className="text-synth-warning mb-6">{error}</p>
+        
+        <div className="space-y-4">
+          <button 
+            onClick={retryAudioInit}
+            className="synth-button mx-auto"
+          >
+            Try Again
+          </button>
+          
+          <div className="text-sm text-gray-400">
+            <p className="mb-2">Troubleshooting tips:</p>
+            <ul className="text-left space-y-1 max-w-md mx-auto">
+              <li>• Make sure your browser supports Web Audio API</li>
+              <li>• Check that audio permissions are enabled</li>
+              <li>• Try refreshing the page</li>
+              <li>• Use a modern browser (Chrome, Firefox, Safari)</li>
+            </ul>
+          </div>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="space-y-6">
+      {/* Cosmic Configuration Warning */}
+      {showCosmicWarning && (
+        <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
+            <div className="flex-1">
+              <h3 className="text-yellow-500 font-medium mb-1">
+                COSMIC_BUCKET_SLUG environment variable is required
+              </h3>
+              <p className="text-sm text-gray-300 mb-3">
+                To save presets, recordings, and drum patterns, you need to configure your Cosmic CMS environment variables.
+              </p>
+              <div className="flex gap-2">
+                <button
+                  onClick={() => setShowCosmicWarning(false)}
+                  className="text-xs px-3 py-1 bg-yellow-600 hover:bg-yellow-700 text-white rounded"
+                >
+                  Dismiss
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Header Controls */}
       <div className="bg-synth-panel p-4 rounded-lg">
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -246,6 +320,7 @@ export default function SynthesizerStudio() {
             <button
               onClick={toggleDrumSequencer}
               className={`synth-button flex items-center gap-2 ${drumState.isPlaying ? 'active' : ''}`}
+              disabled={!audioEngineRef.current?.initialized}
             >
               {drumState.isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
               {drumState.isPlaying ? 'Stop' : 'Play'} Drums
@@ -254,6 +329,7 @@ export default function SynthesizerStudio() {
             <button
               onClick={toggleRecording}
               className={`synth-button flex items-center gap-2 ${recordingState.isRecording ? 'active glow-warning' : ''}`}
+              disabled={!audioEngineRef.current?.initialized}
             >
               <div className={`w-3 h-3 rounded-full ${recordingState.isRecording ? 'bg-red-500 recording-indicator' : 'bg-gray-500'}`} />
               {recordingState.isRecording ? `Recording ${recordingState.duration.toFixed(1)}s` : 'Record'}
@@ -264,6 +340,8 @@ export default function SynthesizerStudio() {
             <button
               onClick={() => setShowPresets(!showPresets)}
               className="synth-button flex items-center gap-2"
+              disabled={!isCosmicConfigured}
+              title={!isCosmicConfigured ? 'Requires Cosmic CMS configuration' : 'Manage presets'}
             >
               <Save className="w-4 h-4" />
               Presets
@@ -314,7 +392,7 @@ export default function SynthesizerStudio() {
       />
 
       {/* Preset Manager Modal */}
-      {showPresets && (
+      {showPresets && isCosmicConfigured && (
         <PresetManager 
           onClose={() => setShowPresets(false)}
           onLoadPreset={handleLoadPreset}

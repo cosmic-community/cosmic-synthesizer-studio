@@ -1,21 +1,32 @@
 import { createBucketClient } from '@cosmicjs/sdk';
 import { SynthPreset, Recording, DrumPattern, CosmicResponse } from '@/types';
 
+// Check for required environment variables with better error handling
 const bucketSlug = process.env.COSMIC_BUCKET_SLUG;
-if (!bucketSlug) {
-  throw new Error('COSMIC_BUCKET_SLUG environment variable is required');
-}
+const readKey = process.env.COSMIC_READ_KEY;
+const writeKey = process.env.COSMIC_WRITE_KEY;
 
-export const cosmic = createBucketClient({
-  bucketSlug,
-  readKey: process.env.COSMIC_READ_KEY || '',
-  writeKey: process.env.COSMIC_WRITE_KEY || '',
+// Create a flag to track if Cosmic is properly configured
+export const isCosmicConfigured = Boolean(bucketSlug && readKey);
+
+// Only create the client if we have the required configuration
+export const cosmic = isCosmicConfigured ? createBucketClient({
+  bucketSlug: bucketSlug!,
+  readKey: readKey || '',
+  writeKey: writeKey || '',
   apiEnvironment: "staging"
-});
+}) : null;
 
 // Simple error helper for Cosmic SDK
 function hasStatus(error: unknown): error is { status: number } {
   return typeof error === 'object' && error !== null && 'status' in error;
+}
+
+// Helper function to check if Cosmic is available
+function checkCosmicAvailability(): void {
+  if (!isCosmicConfigured) {
+    throw new Error('Cosmic CMS is not configured. Please set COSMIC_BUCKET_SLUG and COSMIC_READ_KEY environment variables.');
+  }
 }
 
 // Preset functions
@@ -36,6 +47,12 @@ export async function savePreset(presetData: {
   chorus_rate?: number;
   chorus_depth?: number;
 }): Promise<SynthPreset> {
+  checkCosmicAvailability();
+  
+  if (!cosmic) {
+    throw new Error('Cosmic client not initialized');
+  }
+
   try {
     const response = await cosmic.objects.insertOne({
       type: 'presets',
@@ -65,6 +82,15 @@ export async function savePreset(presetData: {
 }
 
 export async function getPresets(): Promise<SynthPreset[]> {
+  if (!isCosmicConfigured) {
+    // Return empty array if Cosmic is not configured
+    return [];
+  }
+
+  if (!cosmic) {
+    return [];
+  }
+
   try {
     const response = await cosmic.objects
       .find({ type: 'presets' })
@@ -77,11 +103,17 @@ export async function getPresets(): Promise<SynthPreset[]> {
       return [];
     }
     console.error('Error fetching presets:', error);
-    throw new Error('Failed to fetch presets');
+    return []; // Return empty array instead of throwing
   }
 }
 
 export async function getPreset(slug: string): Promise<SynthPreset | null> {
+  checkCosmicAvailability();
+  
+  if (!cosmic) {
+    return null;
+  }
+
   try {
     const response = await cosmic.objects.findOne({
       type: 'presets',
@@ -112,6 +144,12 @@ export async function saveRecording(recordingData: {
   tags: string[];
   preset_used?: string;
 }): Promise<Recording> {
+  checkCosmicAvailability();
+  
+  if (!cosmic) {
+    throw new Error('Cosmic client not initialized');
+  }
+
   try {
     const response = await cosmic.objects.insertOne({
       type: 'recordings',
@@ -133,6 +171,14 @@ export async function saveRecording(recordingData: {
 }
 
 export async function getRecordings(): Promise<Recording[]> {
+  if (!isCosmicConfigured) {
+    return [];
+  }
+
+  if (!cosmic) {
+    return [];
+  }
+
   try {
     const response = await cosmic.objects
       .find({ type: 'recordings' })
@@ -145,11 +191,17 @@ export async function getRecordings(): Promise<Recording[]> {
       return [];
     }
     console.error('Error fetching recordings:', error);
-    throw new Error('Failed to fetch recordings');
+    return [];
   }
 }
 
 export async function updateRecordingShares(id: string): Promise<void> {
+  checkCosmicAvailability();
+  
+  if (!cosmic) {
+    throw new Error('Cosmic client not initialized');
+  }
+
   try {
     const recording = await cosmic.objects.findOne({ 
       type: 'recordings',
@@ -178,6 +230,12 @@ export async function saveDrumPattern(patternData: {
   pattern: boolean[][];
   sounds: any[];
 }): Promise<DrumPattern> {
+  checkCosmicAvailability();
+  
+  if (!cosmic) {
+    throw new Error('Cosmic client not initialized');
+  }
+
   try {
     const response = await cosmic.objects.insertOne({
       type: 'drum_patterns',
@@ -197,6 +255,14 @@ export async function saveDrumPattern(patternData: {
 }
 
 export async function getDrumPatterns(): Promise<DrumPattern[]> {
+  if (!isCosmicConfigured) {
+    return [];
+  }
+
+  if (!cosmic) {
+    return [];
+  }
+
   try {
     const response = await cosmic.objects
       .find({ type: 'drum_patterns' })
@@ -209,6 +275,6 @@ export async function getDrumPatterns(): Promise<DrumPattern[]> {
       return [];
     }
     console.error('Error fetching drum patterns:', error);
-    throw new Error('Failed to fetch drum patterns');
+    return [];
   }
 }
