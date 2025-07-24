@@ -93,7 +93,7 @@ export interface AudioParam {
 
 export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
-// Effect types for audio engine
+// Effect types for audio engine - EXPORTED for lib/audioEngine.ts
 export type EffectType = 'reverb' | 'delay' | 'distortion' | 'chorus' | 'phaser' | 'flanger' | 'compressor' | 'eq';
 
 export interface Preset {
@@ -128,7 +128,7 @@ export interface Preset {
   };
 }
 
-// Alias for PresetManager component
+// EXPORTED for PresetManager component
 export type SynthPreset = Preset;
 
 export interface VisualizationData {
@@ -165,7 +165,7 @@ export interface RecordingObject extends CosmicObjectBase {
   };
 }
 
-// Alias for cosmic.ts usage
+// EXPORTED for cosmic.ts usage
 export type Recording = RecordingObject;
 
 export interface DrumPatternObject extends CosmicObjectBase {
@@ -177,10 +177,10 @@ export interface DrumPatternObject extends CosmicObjectBase {
   };
 }
 
-// Alias for cosmic.ts usage
+// EXPORTED for cosmic.ts usage
 export type DrumPattern = DrumPatternObject;
 
-// Generic Cosmic API response type
+// Generic Cosmic API response type - EXPORTED for cosmic.ts
 export interface CosmicResponse<T = any> {
   objects?: T[];
   object?: T;
