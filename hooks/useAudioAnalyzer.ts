@@ -287,7 +287,7 @@ export function useAudioAnalyzer(
   }, [audioContext, data.floatFrequencyData]);
 
   // Get peak frequency
-  const getPeakFrequency = useCallback(): number => {
+  const getPeakFrequency = useCallback((): number => {
     if (!audioContext || !data.floatFrequencyData.length) return 0;
     
     let maxMagnitude = -Infinity;
