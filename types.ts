@@ -128,8 +128,11 @@ export interface Preset {
   };
 }
 
-// EXPORTED for PresetManager component
-export type SynthPreset = Preset;
+// EXPORTED for PresetManager component - Updated to extend CosmicObjectBase
+export interface SynthPreset extends CosmicObjectBase {
+  type: 'presets';
+  metadata: Preset['metadata'];
+}
 
 export interface VisualizationData {
   waveform: number[];
