@@ -1,78 +1,4 @@
-// Base Cosmic object interface
-interface CosmicObject {
-  id: string;
-  slug: string;
-  title: string;
-  content?: string;
-  metadata: Record<string, any>;
-  type: string;
-  created_at: string;
-  modified_at: string;
-}
-
-// Synthesizer preset type
-interface SynthPreset extends CosmicObject {
-  type: 'presets';
-  metadata: {
-    oscillator_type: OscillatorType;
-    filter_cutoff: number;
-    filter_resonance: number;
-    envelope_attack: number;
-    envelope_decay: number;
-    envelope_sustain: number;
-    envelope_release: number;
-    effects: EffectType[];
-    reverb_amount?: number;
-    delay_time?: number;
-    delay_feedback?: number;
-    distortion_amount?: number;
-    chorus_rate?: number;
-    chorus_depth?: number;
-  };
-}
-
-// Recording type
-interface Recording extends CosmicObject {
-  type: 'recordings';
-  metadata: {
-    duration: number;
-    bpm: number;
-    audio_data?: {
-      url: string;
-      imgix_url: string;
-    };
-    waveform_data?: number[];
-    social_shares: number;
-    tags: string[];
-    preset_used?: string;
-    drum_pattern?: DrumPattern;
-  };
-}
-
-// Drum pattern type
-interface DrumPattern extends CosmicObject {
-  type: 'drum_patterns';
-  metadata: {
-    bpm: number;
-    steps: number;
-    pattern: boolean[][];
-    sounds: DrumSound[];
-  };
-}
-
-// Audio types
-type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
-type EffectType = 'reverb' | 'delay' | 'filter' | 'distortion' | 'chorus';
-
-interface DrumSound {
-  name: string;
-  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'crash' | 'ride';
-  frequency?: number;
-  decay?: number;
-}
-
-// Synthesizer state
-interface SynthState {
+export interface SynthState {
   oscillatorType: OscillatorType;
   filterCutoff: number;
   filterResonance: number;
@@ -81,16 +7,54 @@ interface SynthState {
   sustain: number;
   release: number;
   volume: number;
-  effects: {
-    reverb: { active: boolean; amount: number };
-    delay: { active: boolean; time: number; feedback: number };
-    distortion: { active: boolean; amount: number };
-    chorus: { active: boolean; rate: number; depth: number };
+  effects: EffectsState;
+}
+
+export interface EffectsState {
+  reverb: {
+    active: boolean;
+    amount: number;
+    roomSize?: number;
+  };
+  delay: {
+    active: boolean;
+    time: number;
+    feedback: number;
+  };
+  distortion: {
+    active: boolean;
+    amount: number;
+    type?: 'soft' | 'hard' | 'tube' | 'fuzz' | 'bitcrush';
+  };
+  chorus: {
+    active: boolean;
+    rate: number;
+    depth: number;
+  };
+  phaser?: {
+    active: boolean;
+    rate: number;
+    depth: number;
+  };
+  flanger?: {
+    active: boolean;
+    rate: number;
+    feedback: number;
+  };
+  compressor?: {
+    active: boolean;
+    threshold: number;
+    ratio: number;
+  };
+  eq?: {
+    active: boolean;
+    low: number;
+    mid: number;
+    high: number;
   };
 }
 
-// Recording state
-interface RecordingState {
+export interface RecordingState {
   isRecording: boolean;
   isPlaying: boolean;
   duration: number;
@@ -98,59 +62,108 @@ interface RecordingState {
   waveformData: number[];
 }
 
-// Drum sequencer state
-interface DrumSequencerState {
+export interface DrumSequencerState {
   isPlaying: boolean;
   currentStep: number;
   bpm: number;
-  pattern: boolean[][];
+  pattern?: boolean[][];
   selectedSound: number;
-  sounds: DrumSound[];
+  sounds?: DrumSound[];
 }
 
-// API response types
-interface CosmicResponse<T> {
-  objects: T[];
-  total: number;
-  limit: number;
-  skip: number;
+export interface DrumSound {
+  name: string;
+  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'crash' | 'ride';
+  frequency: number;
+  decay: number;
+  volume?: number;
 }
 
-// Utility types
-type CreatePresetData = Omit<SynthPreset, 'id' | 'created_at' | 'modified_at'>;
-type CreateRecordingData = Omit<Recording, 'id' | 'created_at' | 'modified_at'>;
-
-// Type guards
-function isPreset(obj: CosmicObject): obj is SynthPreset {
-  return obj.type === 'presets';
+export interface AudioNode {
+  connect(destination: AudioNode | AudioParam): void;
+  disconnect(): void;
 }
 
-function isRecording(obj: CosmicObject): obj is Recording {
-  return obj.type === 'recordings';
+export interface AudioParam {
+  value: number;
+  setValueAtTime(value: number, startTime: number): void;
+  linearRampToValueAtTime(value: number, endTime: number): void;
+  exponentialRampToValueAtTime(value: number, endTime: number): void;
 }
 
-function isDrumPattern(obj: CosmicObject): obj is DrumPattern {
-  return obj.type === 'drum_patterns';
+export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
+
+export interface Preset {
+  id: string;
+  title: string;
+  metadata: {
+    oscillator_type: OscillatorType;
+    filter_cutoff: number;
+    filter_resonance: number;
+    envelope_attack: number;
+    envelope_decay: number;
+    envelope_sustain: number;
+    envelope_release: number;
+    effects: string[];
+    reverb_amount?: number;
+    reverb_room_size?: number;
+    delay_time?: number;
+    delay_feedback?: number;
+    distortion_amount?: number;
+    distortion_type?: string;
+    chorus_rate?: number;
+    chorus_depth?: number;
+    phaser_rate?: number;
+    phaser_depth?: number;
+    flanger_rate?: number;
+    flanger_feedback?: number;
+    compressor_threshold?: number;
+    compressor_ratio?: number;
+    eq_low?: number;
+    eq_mid?: number;
+    eq_high?: number;
+  };
 }
 
-export type {
-  CosmicObject,
-  SynthPreset,
-  Recording,
-  DrumPattern,
-  OscillatorType,
-  EffectType,
-  DrumSound,
-  SynthState,
-  RecordingState,
-  DrumSequencerState,
-  CosmicResponse,
-  CreatePresetData,
-  CreateRecordingData
-};
+export interface VisualizationData {
+  waveform: number[];
+  frequency: number[];
+  volume: number;
+}
 
-export {
-  isPreset,
-  isRecording,
-  isDrumPattern
-};
+export interface CosmicObjectBase {
+  id: string;
+  title: string;
+  slug: string;
+  status: 'published' | 'draft';
+  created_at: string;
+  modified_at: string;
+  thumbnail?: string;
+}
+
+export interface PresetObject extends CosmicObjectBase {
+  type: 'presets';
+  metadata: Preset['metadata'];
+}
+
+export interface RecordingObject extends CosmicObjectBase {
+  type: 'recordings';
+  metadata: {
+    duration: number;
+    file_size: number;
+    recording_date: string;
+    audio_file: {
+      url: string;
+      imgix_url: string;
+    };
+  };
+}
+
+export interface DrumPatternObject extends CosmicObjectBase {
+  type: 'drum-patterns';
+  metadata: {
+    bpm: number;
+    pattern_data: string; // JSON stringified pattern
+    sounds_config: string; // JSON stringified sounds array
+  };
+}

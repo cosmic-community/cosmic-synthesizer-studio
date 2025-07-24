@@ -23,10 +23,14 @@ const defaultSynthState: SynthState = {
   release: 0.5,
   volume: 0.5,
   effects: {
-    reverb: { active: false, amount: 0.3 },
+    reverb: { active: false, amount: 0.3, roomSize: 0.5 },
     delay: { active: false, time: 0.25, feedback: 0.3 },
-    distortion: { active: false, amount: 50 },
-    chorus: { active: false, rate: 1, depth: 0.5 }
+    distortion: { active: false, amount: 50, type: 'soft' },
+    chorus: { active: false, rate: 1, depth: 0.5 },
+    phaser: { active: false, rate: 0.5, depth: 0.7 },
+    flanger: { active: false, rate: 0.3, feedback: 0.6 },
+    compressor: { active: false, threshold: -20, ratio: 4 },
+    eq: { active: false, low: 0, mid: 0, high: 0 }
   }
 };
 
@@ -45,14 +49,14 @@ const defaultDrumState: DrumSequencerState = {
   pattern: Array(8).fill(null).map(() => Array(16).fill(false)),
   selectedSound: 0,
   sounds: [
-    { name: 'Kick', type: 'kick', frequency: 60, decay: 0.5 },
-    { name: 'Snare', type: 'snare', frequency: 200, decay: 0.2 },
-    { name: 'Hi-Hat', type: 'hihat', frequency: 8000, decay: 0.1 },
-    { name: 'Open Hat', type: 'openhat', frequency: 9000, decay: 0.3 },
-    { name: 'Crash', type: 'crash', frequency: 5000, decay: 0.8 },
-    { name: 'Ride', type: 'ride', frequency: 3000, decay: 0.6 },
-    { name: 'Tom 1', type: 'kick', frequency: 100, decay: 0.3 },
-    { name: 'Tom 2', type: 'kick', frequency: 80, decay: 0.35 }
+    { name: 'Kick', type: 'kick', frequency: 60, decay: 0.5, volume: 0.8 },
+    { name: 'Snare', type: 'snare', frequency: 200, decay: 0.2, volume: 0.7 },
+    { name: 'Hi-Hat', type: 'hihat', frequency: 8000, decay: 0.1, volume: 0.6 },
+    { name: 'Open Hat', type: 'openhat', frequency: 9000, decay: 0.3, volume: 0.5 },
+    { name: 'Crash', type: 'crash', frequency: 5000, decay: 0.8, volume: 0.6 },
+    { name: 'Ride', type: 'ride', frequency: 3000, decay: 0.6, volume: 0.5 },
+    { name: 'Tom 1', type: 'kick', frequency: 100, decay: 0.3, volume: 0.7 },
+    { name: 'Tom 2', type: 'kick', frequency: 80, decay: 0.35, volume: 0.7 }
   ]
 };
 
@@ -285,7 +289,8 @@ export default function SynthesizerStudio() {
       effects: {
         reverb: { 
           active: preset.metadata?.effects?.includes('reverb') || false, 
-          amount: preset.metadata?.reverb_amount || 0.3 
+          amount: preset.metadata?.reverb_amount || 0.3,
+          roomSize: preset.metadata?.reverb_room_size || 0.5
         },
         delay: { 
           active: preset.metadata?.effects?.includes('delay') || false, 
@@ -294,12 +299,34 @@ export default function SynthesizerStudio() {
         },
         distortion: { 
           active: preset.metadata?.effects?.includes('distortion') || false, 
-          amount: preset.metadata?.distortion_amount || 50 
+          amount: preset.metadata?.distortion_amount || 50,
+          type: preset.metadata?.distortion_type || 'soft'
         },
         chorus: { 
           active: preset.metadata?.effects?.includes('chorus') || false, 
           rate: preset.metadata?.chorus_rate || 1, 
           depth: preset.metadata?.chorus_depth || 0.5 
+        },
+        phaser: {
+          active: preset.metadata?.effects?.includes('phaser') || false,
+          rate: preset.metadata?.phaser_rate || 0.5,
+          depth: preset.metadata?.phaser_depth || 0.7
+        },
+        flanger: {
+          active: preset.metadata?.effects?.includes('flanger') || false,
+          rate: preset.metadata?.flanger_rate || 0.3,
+          feedback: preset.metadata?.flanger_feedback || 0.6
+        },
+        compressor: {
+          active: preset.metadata?.effects?.includes('compressor') || false,
+          threshold: preset.metadata?.compressor_threshold || -20,
+          ratio: preset.metadata?.compressor_ratio || 4
+        },
+        eq: {
+          active: preset.metadata?.effects?.includes('eq') || false,
+          low: preset.metadata?.eq_low || 0,
+          mid: preset.metadata?.eq_mid || 0,
+          high: preset.metadata?.eq_high || 0
         }
       }
     });
@@ -462,6 +489,18 @@ export default function SynthesizerStudio() {
       {/* Audio Visualizer */}
       <AudioVisualizer audioEngine={audioEngineRef.current} />
 
+      {/* Piano Keyboard - moved higher up */}
+      <PianoKeyboard 
+        onKeyPress={handleKeyPress}
+        onKeyRelease={handleKeyRelease}
+      />
+
+      {/* Drum Sequencer - horizontal layout */}
+      <DrumSequencer 
+        drumState={drumState} 
+        onStateChange={setDrumState} 
+      />
+
       {/* Main Studio Interface */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left Column - Synthesizer Controls */}
@@ -470,17 +509,13 @@ export default function SynthesizerStudio() {
             synthState={synthState} 
             onStateChange={setSynthState} 
           />
+        </div>
+
+        {/* Right Column - Effects and Recording */}
+        <div className="space-y-6">
           <EffectsRack 
             synthState={synthState} 
             onStateChange={setSynthState} 
-          />
-        </div>
-
-        {/* Right Column - Sequencer and Recording */}
-        <div className="space-y-6">
-          <DrumSequencer 
-            drumState={drumState} 
-            onStateChange={setDrumState} 
           />
           <RecordingControls 
             recordingState={recordingState}
@@ -488,12 +523,6 @@ export default function SynthesizerStudio() {
           />
         </div>
       </div>
-
-      {/* Piano Keyboard */}
-      <PianoKeyboard 
-        onKeyPress={handleKeyPress}
-        onKeyRelease={handleKeyRelease}
-      />
 
       {/* Preset Manager Modal */}
       {showPresets && isCosmicConfigured && (
