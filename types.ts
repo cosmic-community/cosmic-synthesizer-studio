@@ -93,6 +93,9 @@ export interface AudioParam {
 
 export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
 
+// Effect types for audio engine
+export type EffectType = 'reverb' | 'delay' | 'distortion' | 'chorus' | 'phaser' | 'flanger' | 'compressor' | 'eq';
+
 export interface Preset {
   id: string;
   title: string;
@@ -124,6 +127,9 @@ export interface Preset {
     eq_high?: number;
   };
 }
+
+// Alias for PresetManager component
+export type SynthPreset = Preset;
 
 export interface VisualizationData {
   waveform: number[];
@@ -159,6 +165,9 @@ export interface RecordingObject extends CosmicObjectBase {
   };
 }
 
+// Alias for cosmic.ts usage
+export type Recording = RecordingObject;
+
 export interface DrumPatternObject extends CosmicObjectBase {
   type: 'drum-patterns';
   metadata: {
@@ -166,4 +175,16 @@ export interface DrumPatternObject extends CosmicObjectBase {
     pattern_data: string; // JSON stringified pattern
     sounds_config: string; // JSON stringified sounds array
   };
+}
+
+// Alias for cosmic.ts usage
+export type DrumPattern = DrumPatternObject;
+
+// Generic Cosmic API response type
+export interface CosmicResponse<T = any> {
+  objects?: T[];
+  object?: T;
+  total?: number;
+  status?: string;
+  message?: string;
 }
