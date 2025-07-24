@@ -11,7 +11,7 @@ import DrumSequencer from '@/components/DrumSequencer';
 import RecordingControls from '@/components/RecordingControls';
 import AudioVisualizer from '@/components/AudioVisualizer';
 import PresetManager from '@/components/PresetManager';
-import { Play, Square, Save, Settings, AlertTriangle } from 'lucide-react';
+import { Play, Square, Save, Settings, AlertTriangle, RefreshCw } from 'lucide-react';
 
 const defaultSynthState: SynthState = {
   oscillatorType: 'sawtooth',
@@ -64,30 +64,64 @@ export default function SynthesizerStudio() {
   const [error, setError] = useState<string | null>(null);
   const [showPresets, setShowPresets] = useState(false);
   const [showCosmicWarning, setShowCosmicWarning] = useState(!isCosmicConfigured);
+  const [initializationAttempts, setInitializationAttempts] = useState(0);
 
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize audio engine
-  useEffect(() => {
-    const initAudio = async () => {
-      try {
-        audioEngineRef.current = new AudioEngine();
-        await audioEngineRef.current.init();
-        await audioEngineRef.current.resume();
-        setIsLoading(false);
-        setError(null);
-      } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-        setError(`Failed to initialize audio engine: ${errorMessage}`);
-        setIsLoading(false);
-      }
-    };
+  // Initialize audio engine with better error handling
+  const initializeAudioEngine = async (attempt: number = 0) => {
+    try {
+      console.log(`Audio engine initialization attempt ${attempt + 1}`);
+      setIsLoading(true);
+      setError(null);
 
-    initAudio();
+      // Clean up existing engine if any
+      if (audioEngineRef.current) {
+        audioEngineRef.current.destroy();
+        audioEngineRef.current = null;
+      }
+
+      // Create new audio engine
+      const audioEngine = new AudioEngine();
+      audioEngineRef.current = audioEngine;
+
+      // Initialize the engine
+      await audioEngine.init();
+      
+      // Try to resume the context (this might require user interaction)
+      await audioEngine.resume();
+
+      console.log('Audio engine initialized successfully');
+      setIsLoading(false);
+      setError(null);
+      setInitializationAttempts(0);
+    } catch (err) {
+      console.error('Audio engine initialization failed:', err);
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
+      
+      // Clean up failed engine
+      if (audioEngineRef.current) {
+        audioEngineRef.current.destroy();
+        audioEngineRef.current = null;
+      }
+
+      setError(errorMessage);
+      setIsLoading(false);
+      setInitializationAttempts(attempt + 1);
+    }
+  };
+
+  // Initialize audio engine on mount
+  useEffect(() => {
+    // Add a small delay to ensure DOM is ready
+    const timer = setTimeout(() => {
+      initializeAudioEngine(0);
+    }, 100);
 
     return () => {
+      clearTimeout(timer);
       if (audioEngineRef.current) {
         audioEngineRef.current.destroy();
       }
@@ -100,10 +134,39 @@ export default function SynthesizerStudio() {
     };
   }, []);
 
+  // Handle user interactions to resume audio context
+  const handleUserInteraction = async () => {
+    if (audioEngineRef.current && !audioEngineRef.current.initialized) {
+      try {
+        await audioEngineRef.current.resume();
+        console.log('Audio context resumed after user interaction');
+      } catch (error) {
+        console.error('Failed to resume audio context:', error);
+      }
+    }
+  };
+
+  // Add click handler to document for audio context resume
+  useEffect(() => {
+    const handleClick = () => {
+      handleUserInteraction();
+    };
+
+    document.addEventListener('click', handleClick, { once: true });
+    document.addEventListener('keydown', handleClick, { once: true });
+
+    return () => {
+      document.removeEventListener('click', handleClick);
+      document.removeEventListener('keydown', handleClick);
+    };
+  }, []);
+
   // Handle key press for piano
   const handleKeyPress = (frequency: number) => {
     if (audioEngineRef.current && audioEngineRef.current.initialized) {
       audioEngineRef.current.playNote(frequency, synthState);
+    } else {
+      handleUserInteraction();
     }
   };
 
@@ -114,10 +177,19 @@ export default function SynthesizerStudio() {
   };
 
   // Handle drum sequencer
-  const toggleDrumSequencer = () => {
-    if (!audioEngineRef.current || !audioEngineRef.current.initialized) {
+  const toggleDrumSequencer = async () => {
+    if (!audioEngineRef.current) {
       setError('Audio engine not ready');
       return;
+    }
+
+    // Try to resume context if needed
+    if (!audioEngineRef.current.initialized) {
+      await handleUserInteraction();
+      if (!audioEngineRef.current.initialized) {
+        setError('Please click anywhere to enable audio');
+        return;
+      }
     }
 
     if (drumState.isPlaying) {
@@ -154,9 +226,18 @@ export default function SynthesizerStudio() {
 
   // Handle recording
   const toggleRecording = async () => {
-    if (!audioEngineRef.current || !audioEngineRef.current.initialized) {
+    if (!audioEngineRef.current) {
       setError('Audio engine not ready');
       return;
+    }
+
+    // Try to resume context if needed
+    if (!audioEngineRef.current.initialized) {
+      await handleUserInteraction();
+      if (!audioEngineRef.current.initialized) {
+        setError('Please click anywhere to enable audio');
+        return;
+      }
     }
 
     if (recordingState.isRecording) {
@@ -227,31 +308,21 @@ export default function SynthesizerStudio() {
 
   // Retry audio initialization
   const retryAudioInit = async () => {
-    setIsLoading(true);
-    setError(null);
-    
-    try {
-      if (audioEngineRef.current) {
-        audioEngineRef.current.destroy();
-      }
-      
-      audioEngineRef.current = new AudioEngine();
-      await audioEngineRef.current.init();
-      await audioEngineRef.current.resume();
-      setIsLoading(false);
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
-      setError(`Failed to initialize audio engine: ${errorMessage}`);
-      setIsLoading(false);
-    }
+    await initializeAudioEngine(initializationAttempts);
   };
 
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
-          <div className="w-12 h-12 border-4 border-synth-control border-t-synth-accent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-synth-accent">Initializing Audio Engine...</p>
+          <div className="relative">
+            <div className="w-16 h-16 border-4 border-synth-control border-t-synth-accent rounded-full animate-spin mx-auto mb-4"></div>
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-8 h-8 bg-synth-accent rounded-full opacity-20 animate-pulse"></div>
+            </div>
+          </div>
+          <p className="text-synth-accent mb-2">Initializing Audio Engine...</p>
+          <p className="text-sm text-gray-400">Setting up Web Audio API and audio nodes</p>
         </div>
       </div>
     );
@@ -265,22 +336,40 @@ export default function SynthesizerStudio() {
         <p className="text-synth-warning mb-6">{error}</p>
         
         <div className="space-y-4">
-          <button 
-            onClick={retryAudioInit}
-            className="synth-button mx-auto"
-          >
-            Try Again
-          </button>
+          <div className="flex items-center justify-center gap-4">
+            <button 
+              onClick={retryAudioInit}
+              className="synth-button flex items-center gap-2"
+              disabled={isLoading}
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+              {isLoading ? 'Retrying...' : 'Try Again'}
+            </button>
+            
+            {initializationAttempts > 0 && (
+              <span className="text-sm text-gray-400">
+                Attempt {initializationAttempts + 1}
+              </span>
+            )}
+          </div>
           
           <div className="text-sm text-gray-400">
             <p className="mb-2">Troubleshooting tips:</p>
             <ul className="text-left space-y-1 max-w-md mx-auto">
               <li>• Make sure your browser supports Web Audio API</li>
               <li>• Check that audio permissions are enabled</li>
-              <li>• Try refreshing the page</li>
+              <li>• Try clicking anywhere on the page to enable audio</li>
               <li>• Use a modern browser (Chrome, Firefox, Safari)</li>
+              <li>• Refresh the page and try again</li>
+              <li>• Check browser console for detailed error messages</li>
             </ul>
           </div>
+          
+          {audioEngineRef.current && (
+            <div className="text-xs text-gray-500 mt-4">
+              Audio context state: {audioEngineRef.current.contextState}
+            </div>
+          )}
         </div>
       </div>
     );
@@ -353,6 +442,21 @@ export default function SynthesizerStudio() {
             </button>
           </div>
         </div>
+
+        {/* Audio Engine Status */}
+        {audioEngineRef.current && (
+          <div className="mt-3 pt-3 border-t border-synth-control/20">
+            <div className="flex items-center justify-between text-xs text-gray-400">
+              <span>
+                Audio Engine: {audioEngineRef.current.initialized ? 
+                  <span className="text-green-400">Ready</span> : 
+                  <span className="text-yellow-400">Suspended (click to activate)</span>
+                }
+              </span>
+              <span>Context: {audioEngineRef.current.contextState}</span>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Audio Visualizer */}

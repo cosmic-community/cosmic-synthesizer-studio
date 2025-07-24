@@ -14,20 +14,47 @@ export class AudioEngine {
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private isInitialized: boolean = false;
+  private initializationPromise: Promise<void> | null = null;
 
   constructor() {
-    // Don't initialize immediately - let the init method handle errors
+    // Don't initialize immediately - let the init method handle initialization
   }
 
   public async init(): Promise<void> {
+    // Return existing initialization promise if already initializing
+    if (this.initializationPromise) {
+      return this.initializationPromise;
+    }
+
+    // Return immediately if already initialized
+    if (this.isInitialized) {
+      return Promise.resolve();
+    }
+
+    // Create and store the initialization promise
+    this.initializationPromise = this.performInitialization();
+    
     try {
+      await this.initializationPromise;
+    } catch (error) {
+      // Reset promise on failure so retry is possible
+      this.initializationPromise = null;
+      throw error;
+    }
+  }
+
+  private async performInitialization(): Promise<void> {
+    try {
+      console.log('Starting audio engine initialization...');
+
       // Check for Web Audio API support
-      if (!window.AudioContext && !(window as any).webkitAudioContext) {
-        throw new Error('Web Audio API is not supported in this browser');
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) {
+        throw new Error('Web Audio API is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.');
       }
 
       // Create audio context
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      console.log('Creating audio context...');
       this.audioContext = new AudioContextClass();
 
       // Check if context was created successfully
@@ -35,13 +62,33 @@ export class AudioEngine {
         throw new Error('Failed to create audio context');
       }
 
-      // Create audio nodes
+      console.log('Audio context created, state:', this.audioContext.state);
+
+      // Handle suspended context (required for user interaction)
+      if (this.audioContext.state === 'suspended') {
+        console.log('Audio context is suspended, attempting to resume...');
+        try {
+          await this.audioContext.resume();
+          console.log('Audio context resumed, state:', this.audioContext.state);
+        } catch (resumeError) {
+          console.warn('Failed to resume audio context:', resumeError);
+          // Continue initialization - we'll try to resume later when user interacts
+        }
+      }
+
+      // Create basic audio nodes
+      console.log('Creating audio nodes...');
       this.masterGain = this.audioContext.createGain();
       this.compressor = this.audioContext.createDynamicsCompressor();
       this.analyser = this.audioContext.createAnalyser();
       this.filter = this.audioContext.createBiquadFilter();
 
-      // Set up the audio chain
+      if (!this.masterGain || !this.compressor || !this.analyser || !this.filter) {
+        throw new Error('Failed to create required audio nodes');
+      }
+
+      // Set up the basic audio chain
+      console.log('Setting up audio chain...');
       this.masterGain.connect(this.compressor);
       this.compressor.connect(this.filter);
       this.filter.connect(this.analyser);
@@ -63,10 +110,18 @@ export class AudioEngine {
       this.filter.frequency.value = 20000;
       this.filter.Q.value = 1;
 
+      // Set initial master volume
+      this.masterGain.gain.value = 0.7;
+
+      // Initialize effects (non-critical)
+      console.log('Initializing effects...');
       await this.initializeEffects();
+
       this.isInitialized = true;
+      console.log('Audio engine initialization completed successfully');
     } catch (error) {
       console.error('Audio engine initialization failed:', error);
+      this.cleanup();
       throw new Error(`Audio engine initialization failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
@@ -75,9 +130,10 @@ export class AudioEngine {
     if (!this.audioContext) return;
 
     try {
+      console.log('Creating reverb...');
       // Create reverb impulse response
       this.reverb = this.audioContext.createConvolver();
-      const impulseLength = this.audioContext.sampleRate * 2;
+      const impulseLength = Math.min(this.audioContext.sampleRate * 2, 88200); // Limit size
       const impulse = this.audioContext.createBuffer(2, impulseLength, this.audioContext.sampleRate);
       
       for (let channel = 0; channel < 2; channel++) {
@@ -88,17 +144,21 @@ export class AudioEngine {
       }
       this.reverb.buffer = impulse;
 
+      console.log('Creating delay...');
       // Create delay
       this.delay = this.audioContext.createDelay(1.0);
       const delayFeedback = this.audioContext.createGain();
+      delayFeedback.gain.value = 0.3;
       this.delay.connect(delayFeedback);
       delayFeedback.connect(this.delay);
 
+      console.log('Creating distortion...');
       // Create distortion
       this.distortion = this.audioContext.createWaveShaper();
       this.distortion.curve = this.makeDistortionCurve(400);
       this.distortion.oversample = '4x';
 
+      console.log('Creating chorus...');
       // Create chorus (using delay and LFO)
       this.chorus = this.audioContext.createDelay(0.02);
       const chorusLFO = this.audioContext.createOscillator();
@@ -108,9 +168,11 @@ export class AudioEngine {
       chorusLFO.frequency.value = 1;
       chorusGain.gain.value = 0.005;
       chorusLFO.start();
+
+      console.log('Effects initialization completed');
     } catch (error) {
       console.error('Effects initialization failed:', error);
-      // Don't throw here - basic functionality should still work
+      // Don't throw here - basic functionality should still work without effects
     }
   }
 
@@ -133,13 +195,21 @@ export class AudioEngine {
     }
     
     if (this.audioContext.state === 'suspended') {
+      console.log('Resuming suspended audio context...');
       await this.audioContext.resume();
+      console.log('Audio context resumed, state:', this.audioContext.state);
     }
   }
 
   public playNote(frequency: number, synthState: SynthState): void {
     if (!this.isInitialized || !this.audioContext || !this.masterGain) {
-      console.warn('Audio engine not initialized');
+      console.warn('Audio engine not initialized, cannot play note');
+      return;
+    }
+
+    // Try to resume context if suspended
+    if (this.audioContext.state === 'suspended') {
+      this.resume().catch(console.error);
       return;
     }
 
@@ -169,7 +239,7 @@ export class AudioEngine {
       envelope.gain.setValueAtTime(0, now);
       envelope.gain.linearRampToValueAtTime(synthState.volume, now + synthState.attack);
       envelope.gain.exponentialRampToValueAtTime(
-        synthState.volume * synthState.sustain,
+        Math.max(0.001, synthState.volume * synthState.sustain),
         now + synthState.attack + synthState.decay
       );
 
@@ -206,7 +276,13 @@ export class AudioEngine {
         envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.5); // Release time
 
         // Stop oscillator after release
-        oscillator.stop(now + 0.5);
+        setTimeout(() => {
+          try {
+            oscillator.stop();
+          } catch (e) {
+            // Oscillator might already be stopped
+          }
+        }, 500);
 
         // Clean up
         this.activeNotes.delete(noteKey);
@@ -230,7 +306,10 @@ export class AudioEngine {
       }
 
       if (synthState.effects.chorus.active && this.chorus) {
-        currentNode.connect(this.chorus);
+        const chorusGain = this.audioContext!.createGain();
+        chorusGain.gain.value = 0.5;
+        currentNode.connect(chorusGain);
+        chorusGain.connect(this.chorus);
         this.chorus.connect(this.masterGain);
       }
 
@@ -264,6 +343,12 @@ export class AudioEngine {
 
   public playDrumSound(sound: DrumSound): void {
     if (!this.isInitialized || !this.audioContext || !this.masterGain) return;
+
+    // Try to resume context if suspended
+    if (this.audioContext.state === 'suspended') {
+      this.resume().catch(console.error);
+      return;
+    }
 
     try {
       const oscillator = this.audioContext.createOscillator();
@@ -307,7 +392,13 @@ export class AudioEngine {
       envelope.gain.exponentialRampToValueAtTime(0.001, now + decay);
 
       oscillator.start(now);
-      oscillator.stop(now + decay);
+      setTimeout(() => {
+        try {
+          oscillator.stop();
+        } catch (e) {
+          // Oscillator might already be stopped
+        }
+      }, decay * 1000);
     } catch (error) {
       console.error('Error playing drum sound:', error);
     }
@@ -364,11 +455,12 @@ export class AudioEngine {
 
   public setMasterVolume(volume: number): void {
     if (this.masterGain) {
-      this.masterGain.gain.value = volume;
+      this.masterGain.gain.value = Math.max(0, Math.min(1, volume));
     }
   }
 
-  public destroy(): void {
+  private cleanup(): void {
+    // Stop all active notes
     this.activeNotes.forEach((note) => {
       try {
         note.oscillator.stop();
@@ -378,14 +470,35 @@ export class AudioEngine {
     });
     this.activeNotes.clear();
     
-    if (this.audioContext) {
-      this.audioContext.close();
+    // Close audio context
+    if (this.audioContext && this.audioContext.state !== 'closed') {
+      this.audioContext.close().catch(console.error);
     }
+    
+    // Reset all references
+    this.audioContext = null;
+    this.masterGain = null;
+    this.compressor = null;
+    this.analyser = null;
+    this.reverb = null;
+    this.delay = null;
+    this.filter = null;
+    this.distortion = null;
+    this.chorus = null;
+    this.mediaRecorder = null;
     
     this.isInitialized = false;
   }
 
+  public destroy(): void {
+    this.cleanup();
+  }
+
   public get initialized(): boolean {
-    return this.isInitialized;
+    return this.isInitialized && this.audioContext !== null && this.audioContext.state !== 'closed';
+  }
+
+  public get contextState(): string {
+    return this.audioContext?.state || 'closed';
   }
 }
