@@ -8,8 +8,8 @@ if (!bucketSlug) {
 
 export const cosmic = createBucketClient({
   bucketSlug,
-  readKey: process.env.COSMIC_READ_KEY,
-  writeKey: process.env.COSMIC_WRITE_KEY,
+  readKey: process.env.COSMIC_READ_KEY || '',
+  writeKey: process.env.COSMIC_WRITE_KEY || '',
 });
 
 // Simple error helper for Cosmic SDK

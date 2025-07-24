@@ -37,7 +37,8 @@ export function frequencyToNote(frequency: number): { note: string; octave: numb
     const octave = Math.floor(h / 12);
     const n = h % 12;
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
-    return { note: notes[n] ?? 'A', octave };
+    const note = notes[n];
+    return { note: note ?? 'A', octave };
   }
   
   return { note: 'A', octave: 4 };
