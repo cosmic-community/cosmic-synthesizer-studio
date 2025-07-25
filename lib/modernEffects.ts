@@ -285,125 +285,6 @@ export class ModernDistortion {
   }
 }
 
-// Advanced Chorus with modern modulation
-export class ModernChorus {
-  private context: AudioContext;
-  private input: GainNode;
-  public output: GainNode;
-  private delays: DelayNode[];
-  private lfos: OscillatorNode[];
-  private lfoGains: GainNode[];
-  private feedback: GainNode;
-  private wetGain: GainNode;
-  private dryGain: GainNode;
-
-  constructor(audioContext: AudioContext) {
-    this.context = audioContext;
-    this.input = audioContext.createGain();
-    this.output = audioContext.createGain();
-    this.feedback = audioContext.createGain();
-    this.wetGain = audioContext.createGain();
-    this.dryGain = audioContext.createGain();
-    
-    this.delays = [];
-    this.lfos = [];
-    this.lfoGains = [];
-    
-    this.setupChorusVoices();
-    this.connectNodes();
-  }
-
-  private setupChorusVoices(): void {
-    const numVoices = 3;
-    const baseDelayTime = 0.005; // 5ms base delay
-    
-    for (let i = 0; i < numVoices; i++) {
-      // Create delay line
-      const delay = this.context.createDelay(0.05);
-      delay.delayTime.value = baseDelayTime + (i * 0.003);
-      
-      // Create LFO for modulation
-      const lfo = this.context.createOscillator();
-      lfo.type = 'sine';
-      lfo.frequency.value = 0.3 + (i * 0.2);
-      
-      // Create LFO gain for modulation depth
-      const lfoGain = this.context.createGain();
-      lfoGain.gain.value = 0.002; // 2ms modulation depth
-      
-      // Connect LFO to delay time
-      lfo.connect(lfoGain);
-      lfoGain.connect(delay.delayTime);
-      
-      // Start LFO
-      lfo.start();
-      
-      this.delays.push(delay);
-      this.lfos.push(lfo);
-      this.lfoGains.push(lfoGain);
-    }
-  }
-
-  private connectNodes(): void {
-    // Dry path
-    this.input.connect(this.dryGain);
-    this.dryGain.connect(this.output);
-    
-    // Wet path with feedback
-    this.delays.forEach(delay => {
-      this.input.connect(delay);
-      delay.connect(this.wetGain);
-      delay.connect(this.feedback);
-    });
-    
-    // Add proper null check for array access - this fixes the TypeScript error
-    const firstDelay = this.delays[0];
-    if (firstDelay) {
-      this.feedback.connect(firstDelay);
-    }
-    this.wetGain.connect(this.output);
-    
-    // Set initial levels
-    this.dryGain.gain.value = 0.7;
-    this.wetGain.gain.value = 0.3;
-    this.feedback.gain.value = 0.1;
-  }
-
-  public setRate(rate: number): void {
-    // 0.1 to 5 Hz
-    this.lfos.forEach((lfo, index) => {
-      lfo.frequency.value = rate + (index * 0.2);
-    });
-  }
-
-  public setDepth(depth: number): void {
-    // 0 to 1, affects modulation depth
-    const modDepth = depth * 0.005; // Up to 5ms modulation
-    this.lfoGains.forEach(lfoGain => {
-      lfoGain.gain.value = modDepth;
-    });
-  }
-
-  public setFeedback(feedback: number): void {
-    // 0 to 1
-    this.feedback.gain.value = feedback * 0.3;
-  }
-
-  public setMix(mix: number): void {
-    // 0 to 1, 0 = dry, 1 = wet
-    this.dryGain.gain.value = 1 - mix;
-    this.wetGain.gain.value = mix;
-  }
-
-  public connect(destination: AudioNode): void {
-    this.output.connect(destination);
-  }
-
-  public getInput(): AudioNode {
-    return this.input;
-  }
-}
-
 // Stereo Enhancer for width control
 export class StereoEnhancer {
   private context: AudioContext;
@@ -474,7 +355,7 @@ export class StereoEnhancer {
   }
 }
 
-// Export all modern effects
+// Export all modern effects (removed chorus effect as requested)
 export const modernEffects: ModernEffect[] = [
   {
     id: 'modern-reverb',
@@ -511,25 +392,5 @@ export const modernEffects: ModernEffect[] = [
       input.connect(distortion.getInput());
       return distortion.output;
     }
-  },
-  {
-    id: 'modern-chorus',
-    name: 'Modern Chorus',
-    type: 'modulation',
-    parameters: [
-      { id: 'rate', name: 'Rate', min: 0.1, max: 5, default: 1, unit: 'Hz', curve: 'logarithmic' },
-      { id: 'depth', name: 'Depth', min: 0, max: 1, default: 0.5, unit: '', curve: 'linear' },
-      { id: 'feedback', name: 'Feedback', min: 0, max: 1, default: 0.2, unit: '', curve: 'linear' },
-      { id: 'mix', name: 'Mix', min: 0, max: 1, default: 0.3, unit: '', curve: 'linear' },
-    ],
-    process: (audioContext, input, params) => {
-      const chorus = new ModernChorus(audioContext);
-      chorus.setRate(params.rate ?? 1);
-      chorus.setDepth(params.depth ?? 0.5);
-      chorus.setFeedback(params.feedback ?? 0.2);
-      chorus.setMix(params.mix ?? 0.3);
-      input.connect(chorus.getInput());
-      return chorus.output;
-      }
   }
 ];
