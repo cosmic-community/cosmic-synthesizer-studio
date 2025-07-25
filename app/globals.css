@@ -225,10 +225,6 @@
     @apply studio-button;
   }
 
-  .synth-button.active {
-    @apply studio-button active;
-  }
-
   .synth-slider {
     background: linear-gradient(to right, 
       var(--studio-dark), 
