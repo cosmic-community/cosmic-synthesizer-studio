@@ -223,15 +223,18 @@ export class WaveformVisualizer {
   private getOrCreateGradient(id: string, width: number, height: number, colors: string[]): CanvasGradient {
     const key = `${id}-${width}-${height}-${colors.join(',')}`;
     
-    if (!this.gradientCache.has(key)) {
-      const gradient = this.ctx.createLinearGradient(0, 0, 0, height);
-      colors.forEach((color, index) => {
-        gradient.addColorStop(index / (colors.length - 1), color);
-      });
-      this.gradientCache.set(key, gradient);
+    const existingGradient = this.gradientCache.get(key);
+    if (existingGradient) {
+      return existingGradient;
     }
     
-    return this.gradientCache.get(key)!;
+    const gradient = this.ctx.createLinearGradient(0, 0, 0, height);
+    colors.forEach((color, index) => {
+      gradient.addColorStop(index / (colors.length - 1), color);
+    });
+    this.gradientCache.set(key, gradient);
+    
+    return gradient;
   }
 }
 
@@ -314,12 +317,16 @@ export class SpectrumAnalyzer {
         const endIdx = Math.floor(Math.pow((i + 1) / barCount, 2) * audioData.length);
         
         for (let j = startIdx; j < endIdx && j < audioData.length; j++) {
-          value = Math.max(value, audioData[j] ?? 0);
+          const dataValue = audioData[j];
+          if (dataValue !== undefined) {
+            value = Math.max(value, dataValue);
+          }
         }
       } else {
         // Linear distribution
         const idx = Math.floor((i * audioData.length) / barCount);
-        value = audioData[idx] ?? 0;
+        const dataValue = audioData[idx];
+        value = dataValue ?? 0;
       }
       
       const barHeight = (value / 255) * height * 0.9;
@@ -337,10 +344,11 @@ export class SpectrumAnalyzer {
       }
       
       // Update peak hold
-      if (!this.peakHold[i] || value > this.peakHold[i]) {
+      const currentPeak = this.peakHold[i];
+      if (!currentPeak || value > currentPeak) {
         this.peakHold[i] = value;
       } else {
-        this.peakHold[i] = Math.max(0, this.peakHold[i] - this.peakFallRate);
+        this.peakHold[i] = Math.max(0, currentPeak - this.peakFallRate);
       }
     }
   }
@@ -435,7 +443,10 @@ export class ParticleVisualizer {
       
       let bandValue = 0;
       for (let j = startIdx; j < endIdx; j++) {
-        bandValue = Math.max(bandValue, Math.abs(audioData[j] ?? 0));
+        const dataValue = audioData[j];
+        if (dataValue !== undefined) {
+          bandValue = Math.max(bandValue, Math.abs(dataValue));
+        }
       }
       
       if (bandValue > 0.3) {
@@ -485,8 +496,10 @@ class Particle {
     // Apply audio influence
     if (audioData.length > 0) {
       const idx = Math.floor((this.x / 800) * audioData.length);
-      const audioInfluence = audioData[idx] ?? 0;
-      this.vy += audioInfluence * 0.5;
+      const audioInfluence = audioData[idx];
+      if (audioInfluence !== undefined) {
+        this.vy += audioInfluence * 0.5;
+      }
     }
     
     // Add some physics

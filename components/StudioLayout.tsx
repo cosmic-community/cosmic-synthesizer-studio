@@ -22,7 +22,8 @@ import { clsx } from 'clsx';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import StatusBar from '@/components/StatusBar';
 import Toolbar from '@/components/Toolbar';
-import TabSystem, { Tab, useTabs } from '@/components/TabSystem';
+import TabSystem, { useTabs } from '@/components/TabSystem';
+import { Tab } from '@/types';
 import MixerBoard from '@/components/MixerBoard';
 import SequencerGrid from '@/components/SequencerGrid';
 import EffectsRack from '@/components/EffectsRack';
@@ -196,6 +197,7 @@ export default function StudioLayout({
               isRecording: false,
               isPlaying: false,
               duration: 0,
+              format: 'wav',
               audioBuffer: null,
               waveformData: []
             } as RecordingState}

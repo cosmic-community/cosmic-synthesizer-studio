@@ -40,6 +40,7 @@ const defaultRecordingState: RecordingState = {
   isRecording: false,
   isPlaying: false,
   duration: 0,
+  format: 'wav',
   audioBuffer: null,
   waveformData: []
 };

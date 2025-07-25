@@ -73,7 +73,8 @@ export function frequencyToNote(frequency: number): string | null {
   const octave = Math.floor(h / 12)
   const n = h % 12
   
-  return noteNames[n] ? `${noteNames[n]}${octave}` : null
+  const noteName = noteNames[n]
+  return noteName ? `${noteName}${octave}` : null
 }
 
 export function noteToFrequency(note: string, octave?: number): number {
@@ -117,7 +118,10 @@ export function noteToFrequency(note: string, octave?: number): number {
 export function normalizeAudioData(dataArray: Uint8Array): number[] {
   const normalized: number[] = []
   for (let i = 0; i < dataArray.length; i++) {
-    normalized[i] = dataArray[i] / 255
+    const value = dataArray[i]
+    if (value !== undefined) {
+      normalized[i] = value / 255
+    }
   }
   return normalized
 }
