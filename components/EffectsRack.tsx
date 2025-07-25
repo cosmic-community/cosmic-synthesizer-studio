@@ -10,16 +10,24 @@ interface EffectsRackProps {
 
 export default function EffectsRack({ synthState, onStateChange }: EffectsRackProps) {
   const updateEffect = (effectName: keyof SynthState['effects'], updates: any) => {
+    const currentEffect = synthState.effects[effectName] || {};
+    
     onStateChange({
       ...synthState,
       effects: {
         ...synthState.effects,
         [effectName]: {
-          ...synthState.effects[effectName],
+          ...currentEffect,
           ...updates
         }
       }
     });
+  };
+
+  // Ensure all effects have default active state
+  const getEffectActive = (effectName: keyof SynthState['effects']): boolean => {
+    const effect = synthState.effects[effectName];
+    return effect?.active === true;
   };
 
   return (
@@ -38,39 +46,39 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               Reverb
             </h4>
             <button
-              onClick={() => updateEffect('reverb', { active: !synthState.effects.reverb.active })}
-              className={`synth-button ${synthState.effects.reverb.active ? 'active' : ''}`}
+              onClick={() => updateEffect('reverb', { active: !getEffectActive('reverb') })}
+              className={`synth-button ${getEffectActive('reverb') ? 'active' : ''}`}
             >
-              {synthState.effects.reverb.active ? 'ON' : 'OFF'}
+              {getEffectActive('reverb') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.reverb.active && (
+          {getEffectActive('reverb') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Amount: {Math.round(synthState.effects.reverb.amount * 100)}%
+                  Amount: {Math.round((synthState.effects.reverb?.amount || 0.25) * 100)}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.01"
-                  value={synthState.effects.reverb.amount}
+                  value={synthState.effects.reverb?.amount || 0.25}
                   onChange={(e) => updateEffect('reverb', { amount: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Room Size: {Math.round((synthState.effects.reverb.roomSize || 0.5) * 100)}%
+                  Room Size: {Math.round((synthState.effects.reverb?.roomSize || 0.5) * 100)}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.01"
-                  value={synthState.effects.reverb.roomSize || 0.5}
+                  value={synthState.effects.reverb?.roomSize || 0.5}
                   onChange={(e) => updateEffect('reverb', { roomSize: Number(e.target.value) })}
                   className="synth-slider"
                 />
@@ -87,39 +95,39 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               Delay
             </h4>
             <button
-              onClick={() => updateEffect('delay', { active: !synthState.effects.delay.active })}
-              className={`synth-button ${synthState.effects.delay.active ? 'active' : ''}`}
+              onClick={() => updateEffect('delay', { active: !getEffectActive('delay') })}
+              className={`synth-button ${getEffectActive('delay') ? 'active' : ''}`}
             >
-              {synthState.effects.delay.active ? 'ON' : 'OFF'}
+              {getEffectActive('delay') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.delay.active && (
+          {getEffectActive('delay') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Time: {synthState.effects.delay.time.toFixed(2)}s
+                  Time: {(synthState.effects.delay?.time || 0.25).toFixed(2)}s
                 </label>
                 <input
                   type="range"
                   min="0.01"
                   max="1"
                   step="0.01"
-                  value={synthState.effects.delay.time}
+                  value={synthState.effects.delay?.time || 0.25}
                   onChange={(e) => updateEffect('delay', { time: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Feedback: {Math.round(synthState.effects.delay.feedback * 100)}%
+                  Feedback: {Math.round((synthState.effects.delay?.feedback || 0.3) * 100)}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="0.9"
                   step="0.01"
-                  value={synthState.effects.delay.feedback}
+                  value={synthState.effects.delay?.feedback || 0.3}
                   onChange={(e) => updateEffect('delay', { feedback: Number(e.target.value) })}
                   className="synth-slider"
                 />
@@ -136,35 +144,35 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               Distortion
             </h4>
             <button
-              onClick={() => updateEffect('distortion', { active: !synthState.effects.distortion.active })}
-              className={`synth-button ${synthState.effects.distortion.active ? 'active' : ''}`}
+              onClick={() => updateEffect('distortion', { active: !getEffectActive('distortion') })}
+              className={`synth-button ${getEffectActive('distortion') ? 'active' : ''}`}
             >
-              {synthState.effects.distortion.active ? 'ON' : 'OFF'}
+              {getEffectActive('distortion') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.distortion.active && (
+          {getEffectActive('distortion') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Drive: {synthState.effects.distortion.amount}
+                  Drive: {synthState.effects.distortion?.amount || 30}
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="100"
                   step="1"
-                  value={synthState.effects.distortion.amount}
+                  value={synthState.effects.distortion?.amount || 30}
                   onChange={(e) => updateEffect('distortion', { amount: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Type: {synthState.effects.distortion.type || 'soft'}
+                  Type: {synthState.effects.distortion?.type || 'soft'}
                 </label>
                 <select
-                  value={synthState.effects.distortion.type || 'soft'}
+                  value={synthState.effects.distortion?.type || 'soft'}
                   onChange={(e) => updateEffect('distortion', { type: e.target.value })}
                   className="w-full px-3 py-1 bg-synth-panel border border-gray-600 rounded text-white text-sm"
                 >
@@ -187,39 +195,39 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               Chorus
             </h4>
             <button
-              onClick={() => updateEffect('chorus', { active: !synthState.effects.chorus.active })}
-              className={`synth-button ${synthState.effects.chorus.active ? 'active' : ''}`}
+              onClick={() => updateEffect('chorus', { active: !getEffectActive('chorus') })}
+              className={`synth-button ${getEffectActive('chorus') ? 'active' : ''}`}
             >
-              {synthState.effects.chorus.active ? 'ON' : 'OFF'}
+              {getEffectActive('chorus') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.chorus.active && (
+          {getEffectActive('chorus') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Rate: {synthState.effects.chorus.rate.toFixed(1)}Hz
+                  Rate: {(synthState.effects.chorus?.rate || 1.0).toFixed(1)}Hz
                 </label>
                 <input
                   type="range"
                   min="0.1"
                   max="5"
                   step="0.1"
-                  value={synthState.effects.chorus.rate}
+                  value={synthState.effects.chorus?.rate || 1.0}
                   onChange={(e) => updateEffect('chorus', { rate: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Depth: {Math.round(synthState.effects.chorus.depth * 100)}%
+                  Depth: {Math.round((synthState.effects.chorus?.depth || 0.5) * 100)}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.01"
-                  value={synthState.effects.chorus.depth}
+                  value={synthState.effects.chorus?.depth || 0.5}
                   onChange={(e) => updateEffect('chorus', { depth: Number(e.target.value) })}
                   className="synth-slider"
                 />
@@ -236,39 +244,39 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               Phaser
             </h4>
             <button
-              onClick={() => updateEffect('phaser', { active: !synthState.effects.phaser?.active })}
-              className={`synth-button ${synthState.effects.phaser?.active ? 'active' : ''}`}
+              onClick={() => updateEffect('phaser', { active: !getEffectActive('phaser') })}
+              className={`synth-button ${getEffectActive('phaser') ? 'active' : ''}`}
             >
-              {synthState.effects.phaser?.active ? 'ON' : 'OFF'}
+              {getEffectActive('phaser') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.phaser?.active && (
+          {getEffectActive('phaser') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Rate: {(synthState.effects.phaser.rate || 0.5).toFixed(1)}Hz
+                  Rate: {(synthState.effects.phaser?.rate || 0.5).toFixed(1)}Hz
                 </label>
                 <input
                   type="range"
                   min="0.1"
                   max="3"
                   step="0.1"
-                  value={synthState.effects.phaser.rate || 0.5}
+                  value={synthState.effects.phaser?.rate || 0.5}
                   onChange={(e) => updateEffect('phaser', { rate: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Depth: {Math.round((synthState.effects.phaser.depth || 0.7) * 100)}%
+                  Depth: {Math.round((synthState.effects.phaser?.depth || 0.7) * 100)}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="1"
                   step="0.01"
-                  value={synthState.effects.phaser.depth || 0.7}
+                  value={synthState.effects.phaser?.depth || 0.7}
                   onChange={(e) => updateEffect('phaser', { depth: Number(e.target.value) })}
                   className="synth-slider"
                 />
@@ -285,39 +293,39 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               Flanger
             </h4>
             <button
-              onClick={() => updateEffect('flanger', { active: !synthState.effects.flanger?.active })}
-              className={`synth-button ${synthState.effects.flanger?.active ? 'active' : ''}`}
+              onClick={() => updateEffect('flanger', { active: !getEffectActive('flanger') })}
+              className={`synth-button ${getEffectActive('flanger') ? 'active' : ''}`}
             >
-              {synthState.effects.flanger?.active ? 'ON' : 'OFF'}
+              {getEffectActive('flanger') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.flanger?.active && (
+          {getEffectActive('flanger') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Rate: {(synthState.effects.flanger.rate || 0.3).toFixed(1)}Hz
+                  Rate: {(synthState.effects.flanger?.rate || 0.3).toFixed(1)}Hz
                 </label>
                 <input
                   type="range"
                   min="0.1"
                   max="2"
                   step="0.1"
-                  value={synthState.effects.flanger.rate || 0.3}
+                  value={synthState.effects.flanger?.rate || 0.3}
                   onChange={(e) => updateEffect('flanger', { rate: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Feedback: {Math.round((synthState.effects.flanger.feedback || 0.6) * 100)}%
+                  Feedback: {Math.round((synthState.effects.flanger?.feedback || 0.6) * 100)}%
                 </label>
                 <input
                   type="range"
                   min="0"
                   max="0.9"
                   step="0.01"
-                  value={synthState.effects.flanger.feedback || 0.6}
+                  value={synthState.effects.flanger?.feedback || 0.6}
                   onChange={(e) => updateEffect('flanger', { feedback: Number(e.target.value) })}
                   className="synth-slider"
                 />
@@ -334,39 +342,39 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               Compressor
             </h4>
             <button
-              onClick={() => updateEffect('compressor', { active: !synthState.effects.compressor?.active })}
-              className={`synth-button ${synthState.effects.compressor?.active ? 'active' : ''}`}
+              onClick={() => updateEffect('compressor', { active: !getEffectActive('compressor') })}
+              className={`synth-button ${getEffectActive('compressor') ? 'active' : ''}`}
             >
-              {synthState.effects.compressor?.active ? 'ON' : 'OFF'}
+              {getEffectActive('compressor') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.compressor?.active && (
+          {getEffectActive('compressor') && (
             <div className="space-y-3">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Threshold: {(synthState.effects.compressor.threshold || -20)}dB
+                  Threshold: {(synthState.effects.compressor?.threshold || -20)}dB
                 </label>
                 <input
                   type="range"
                   min="-40"
                   max="0"
                   step="1"
-                  value={synthState.effects.compressor.threshold || -20}
+                  value={synthState.effects.compressor?.threshold || -20}
                   onChange={(e) => updateEffect('compressor', { threshold: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-2">
-                  Ratio: {(synthState.effects.compressor.ratio || 4)}:1
+                  Ratio: {(synthState.effects.compressor?.ratio || 4)}:1
                 </label>
                 <input
                   type="range"
                   min="1"
                   max="20"
                   step="0.5"
-                  value={synthState.effects.compressor.ratio || 4}
+                  value={synthState.effects.compressor?.ratio || 4}
                   onChange={(e) => updateEffect('compressor', { ratio: Number(e.target.value) })}
                   className="synth-slider"
                 />
@@ -383,53 +391,53 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               EQ
             </h4>
             <button
-              onClick={() => updateEffect('eq', { active: !synthState.effects.eq?.active })}
-              className={`synth-button ${synthState.effects.eq?.active ? 'active' : ''}`}
+              onClick={() => updateEffect('eq', { active: !getEffectActive('eq') })}
+              className={`synth-button ${getEffectActive('eq') ? 'active' : ''}`}
             >
-              {synthState.effects.eq?.active ? 'ON' : 'OFF'}
+              {getEffectActive('eq') ? 'ON' : 'OFF'}
             </button>
           </div>
           
-          {synthState.effects.eq?.active && (
+          {getEffectActive('eq') && (
             <div className="space-y-2">
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Low: {(synthState.effects.eq.low || 0) > 0 ? '+' : ''}{(synthState.effects.eq.low || 0)}dB
+                  Low: {(synthState.effects.eq?.low || 0) > 0 ? '+' : ''}{(synthState.effects.eq?.low || 0)}dB
                 </label>
                 <input
                   type="range"
                   min="-12"
                   max="12"
                   step="0.5"
-                  value={synthState.effects.eq.low || 0}
+                  value={synthState.effects.eq?.low || 0}
                   onChange={(e) => updateEffect('eq', { low: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                  Mid: {(synthState.effects.eq.mid || 0) > 0 ? '+' : ''}{(synthState.effects.eq.mid || 0)}dB
+                  Mid: {(synthState.effects.eq?.mid || 0) > 0 ? '+' : ''}{(synthState.effects.eq?.mid || 0)}dB
                 </label>
                 <input
                   type="range"
                   min="-12"
                   max="12"
                   step="0.5"
-                  value={synthState.effects.eq.mid || 0}
+                  value={synthState.effects.eq?.mid || 0}
                   onChange={(e) => updateEffect('eq', { mid: Number(e.target.value) })}
                   className="synth-slider"
                 />
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-300 mb-1">
-                  High: {(synthState.effects.eq.high || 0) > 0 ? '+' : ''}{(synthState.effects.eq.high || 0)}dB
+                  High: {(synthState.effects.eq?.high || 0) > 0 ? '+' : ''}{(synthState.effects.eq?.high || 0)}dB
                 </label>
                 <input
                   type="range"
                   min="-12"
                   max="12"
                   step="0.5"
-                  value={synthState.effects.eq.high || 0}
+                  value={synthState.effects.eq?.high || 0}
                   onChange={(e) => updateEffect('eq', { high: Number(e.target.value) })}
                   className="synth-slider"
                 />
