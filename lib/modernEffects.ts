@@ -356,10 +356,9 @@ export class ModernChorus {
       delay.connect(this.feedback);
     });
     
-    // Add null check for array access
-    const firstDelay = this.delays[0];
-    if (firstDelay) {
-      this.feedback.connect(firstDelay);
+    // Add proper null check for array access
+    if (this.delays.length > 0 && this.delays[0]) {
+      this.feedback.connect(this.delays[0]);
     }
     this.wetGain.connect(this.output);
     
@@ -530,6 +529,6 @@ export const modernEffects: ModernEffect[] = [
       chorus.setMix(params.mix ?? 0.3);
       input.connect(chorus.getInput());
       return chorus.output;
-    }
+      }
   }
 ];
