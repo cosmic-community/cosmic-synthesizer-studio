@@ -1,4 +1,5 @@
 import { SynthState, DrumSoundConfig, OscillatorType, EffectType } from '@/types';
+import { PianoSoundConfig } from './pianoSounds';
 
 export class AudioEngine {
   private audioContext: AudioContext | null = null;
@@ -10,7 +11,7 @@ export class AudioEngine {
   private filter: BiquadFilterNode | null = null;
   private distortion: WaveShaperNode | null = null;
   private chorus: DelayNode | null = null;
-  private activeNotes: Map<string, { oscillator: OscillatorNode; envelope: GainNode }> = new Map();
+  private activeNotes: Map<string, { oscillators: OscillatorNode[]; envelope: GainNode; filter?: BiquadFilterNode }> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private isInitialized: boolean = false;
@@ -253,9 +254,201 @@ export class AudioEngine {
       oscillator.start();
 
       // Store active note
-      this.activeNotes.set(noteKey, { oscillator, envelope });
+      this.activeNotes.set(noteKey, { oscillators: [oscillator], envelope });
     } catch (error) {
       console.error('Error playing note:', error);
+    }
+  }
+
+  public playPianoNote(frequency: number, pianoSound: PianoSoundConfig): void {
+    if (!this.isInitialized || !this.audioContext || !this.masterGain) {
+      console.warn('Audio engine not initialized, cannot play piano note');
+      return;
+    }
+
+    // Try to resume context if suspended
+    if (this.audioContext.state === 'suspended') {
+      this.resume().catch(console.error);
+      return;
+    }
+
+    const noteKey = frequency.toString();
+    
+    // Stop existing note if playing
+    if (this.activeNotes.has(noteKey)) {
+      this.stopNote(frequency);
+    }
+
+    try {
+      const now = this.audioContext.currentTime;
+      const oscillators: OscillatorNode[] = [];
+
+      // Create main oscillator
+      const mainOscillator = this.audioContext.createOscillator();
+      mainOscillator.type = pianoSound.oscillatorType;
+      mainOscillator.frequency.value = frequency;
+      oscillators.push(mainOscillator);
+
+      // Create harmonic oscillators
+      if (pianoSound.harmonics) {
+        for (const harmonic of pianoSound.harmonics) {
+          const harmonicOsc = this.audioContext.createOscillator();
+          harmonicOsc.type = harmonic.type;
+          harmonicOsc.frequency.value = frequency * harmonic.frequency;
+          
+          const harmonicGain = this.audioContext.createGain();
+          harmonicGain.gain.value = harmonic.gain;
+          
+          harmonicOsc.connect(harmonicGain);
+          oscillators.push(harmonicOsc);
+        }
+      }
+
+      // Create filter for this note
+      const noteFilter = this.audioContext.createBiquadFilter();
+      noteFilter.type = pianoSound.filter.type;
+      noteFilter.frequency.value = pianoSound.filter.frequency;
+      noteFilter.Q.value = pianoSound.filter.resonance;
+
+      // Create envelope
+      const envelope = this.audioContext.createGain();
+      envelope.gain.value = 0;
+
+      // Create volume control
+      const volumeGain = this.audioContext.createGain();
+      volumeGain.gain.value = pianoSound.baseVolume;
+
+      // Connect the main audio chain
+      const mixer = this.audioContext.createGain();
+      
+      // Connect all oscillators to mixer
+      oscillators.forEach((osc, index) => {
+        if (index === 0) {
+          // Main oscillator
+          osc.connect(mixer);
+        } else {
+          // Harmonic oscillators (already have their gain nodes)
+          const harmonicNodes = this.getConnectedNodes(osc);
+          if (harmonicNodes.length > 0) {
+            harmonicNodes[harmonicNodes.length - 1].connect(mixer);
+          }
+        }
+      });
+
+      mixer.connect(noteFilter);
+      noteFilter.connect(envelope);
+      envelope.connect(volumeGain);
+      
+      // Apply piano-specific effects
+      this.connectPianoEffects(volumeGain, pianoSound);
+
+      // Apply ADSR envelope
+      envelope.gain.setValueAtTime(0, now);
+      envelope.gain.linearRampToValueAtTime(1, now + pianoSound.envelope.attack);
+      envelope.gain.exponentialRampToValueAtTime(
+        Math.max(0.001, pianoSound.envelope.sustain),
+        now + pianoSound.envelope.attack + pianoSound.envelope.decay
+      );
+
+      // Apply filter envelope
+      if (pianoSound.filter.envelopeAmount > 0) {
+        const filterEnvelope = pianoSound.filter.envelopeAmount * 2000; // Scale envelope amount
+        noteFilter.frequency.setValueAtTime(pianoSound.filter.frequency, now);
+        noteFilter.frequency.linearRampToValueAtTime(
+          pianoSound.filter.frequency + filterEnvelope,
+          now + pianoSound.envelope.attack
+        );
+        noteFilter.frequency.exponentialRampToValueAtTime(
+          Math.max(100, pianoSound.filter.frequency + filterEnvelope * pianoSound.envelope.sustain),
+          now + pianoSound.envelope.attack + pianoSound.envelope.decay
+        );
+      }
+
+      // Start all oscillators
+      oscillators.forEach(osc => osc.start(now));
+
+      // Store active note
+      this.activeNotes.set(noteKey, { oscillators, envelope, filter: noteFilter });
+    } catch (error) {
+      console.error('Error playing piano note:', error);
+    }
+  }
+
+  private getConnectedNodes(node: AudioNode): AudioNode[] {
+    // This is a simplified approach - in practice, you might want to track connections more carefully
+    return [node];
+  }
+
+  private connectPianoEffects(source: AudioNode, pianoSound: PianoSoundConfig): void {
+    if (!this.masterGain) return;
+
+    let currentNode = source;
+
+    try {
+      // Apply EQ if specified
+      if (pianoSound.effects.eq) {
+        const lowShelf = this.audioContext!.createBiquadFilter();
+        const midPeak = this.audioContext!.createBiquadFilter();
+        const highShelf = this.audioContext!.createBiquadFilter();
+
+        lowShelf.type = 'lowshelf';
+        lowShelf.frequency.value = 250;
+        lowShelf.gain.value = (pianoSound.effects.eq.low - 1) * 12; // Convert to dB
+
+        midPeak.type = 'peaking';
+        midPeak.frequency.value = 1000;
+        midPeak.Q.value = 1;
+        midPeak.gain.value = (pianoSound.effects.eq.mid - 1) * 12;
+
+        highShelf.type = 'highshelf';
+        highShelf.frequency.value = 4000;
+        highShelf.gain.value = (pianoSound.effects.eq.high - 1) * 12;
+
+        currentNode.connect(lowShelf);
+        lowShelf.connect(midPeak);
+        midPeak.connect(highShelf);
+        currentNode = highShelf;
+      }
+
+      // Apply compression if specified
+      if (pianoSound.effects.compression) {
+        const compressor = this.audioContext!.createDynamicsCompressor();
+        compressor.threshold.value = pianoSound.effects.compression.threshold;
+        compressor.ratio.value = pianoSound.effects.compression.ratio;
+        compressor.attack.value = pianoSound.effects.compression.attack;
+        compressor.release.value = pianoSound.effects.compression.release;
+        
+        currentNode.connect(compressor);
+        currentNode = compressor;
+      }
+
+      // Apply chorus if specified
+      if (pianoSound.effects.chorus && this.chorus) {
+        const chorusGain = this.audioContext!.createGain();
+        chorusGain.gain.value = pianoSound.effects.chorus.amount;
+        currentNode.connect(chorusGain);
+        chorusGain.connect(this.chorus);
+        this.chorus.connect(this.masterGain);
+        
+        // Update chorus parameters
+        // Note: This is simplified - in practice you'd want separate chorus instances
+      }
+
+      // Apply reverb if specified
+      if (pianoSound.effects.reverb && this.reverb) {
+        const reverbGain = this.audioContext!.createGain();
+        reverbGain.gain.value = pianoSound.effects.reverb.amount;
+        currentNode.connect(reverbGain);
+        reverbGain.connect(this.reverb);
+        this.reverb.connect(this.masterGain);
+      }
+
+      // Always connect dry signal
+      currentNode.connect(this.masterGain);
+    } catch (error) {
+      console.error('Error connecting piano effects:', error);
+      // Fallback to direct connection
+      source.connect(this.masterGain);
     }
   }
 
@@ -267,22 +460,26 @@ export class AudioEngine {
 
     if (activeNote) {
       try {
-        const { oscillator, envelope } = activeNote;
+        const { oscillators, envelope } = activeNote;
         const now = this.audioContext.currentTime;
+
+        // Get the piano sound from the active note (if available)
+        // For now, we'll use a default release time, but this could be improved
+        const releaseTime = 0.5; // Default release time
 
         // Apply release
         envelope.gain.cancelScheduledValues(now);
         envelope.gain.setValueAtTime(envelope.gain.value, now);
-        envelope.gain.exponentialRampToValueAtTime(0.001, now + 0.5); // Release time
+        envelope.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
 
-        // Stop oscillator after release
+        // Stop all oscillators after release
         setTimeout(() => {
           try {
-            oscillator.stop();
+            oscillators.forEach(osc => osc.stop());
           } catch (e) {
-            // Oscillator might already be stopped
+            // Oscillators might already be stopped
           }
-        }, 500);
+        }, releaseTime * 1000);
 
         // Clean up
         this.activeNotes.delete(noteKey);
@@ -526,7 +723,7 @@ export class AudioEngine {
     // Stop all active notes
     this.activeNotes.forEach((note) => {
       try {
-        note.oscillator.stop();
+        note.oscillators.forEach(osc => osc.stop());
       } catch (error) {
         // Ignore errors when stopping oscillators
       }
