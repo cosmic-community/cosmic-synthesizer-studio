@@ -55,7 +55,7 @@ import {
   Grid3x3,
   Cloud,
   Edit,
-  Waveform
+  AudioWaveform
 } from 'lucide-react';
 
 const defaultSynthState: SynthState = {
@@ -233,7 +233,7 @@ export default function SynthesizerStudio() {
     {
       id: 'waveform',
       title: 'Waveform',
-      icon: <Waveform className="w-4 h-4" />,
+      icon: <AudioWaveform className="w-4 h-4" />,
       content: <WaveformEditor />,
       closable: true
     },
