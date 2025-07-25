@@ -12,6 +12,28 @@ import RecordingControls from '@/components/RecordingControls';
 import AudioVisualizer from '@/components/AudioVisualizer';
 import PresetManager from '@/components/PresetManager';
 import TabSystem, { Tab, useTabs } from '@/components/TabSystem';
+import MixerConsole from '@/components/MixerConsole';
+import TrackSequencer from '@/components/TrackSequencer';
+import SampleLibrary from '@/components/SampleLibrary';
+import MIDIController from '@/components/MIDIController';
+import LoopStation from '@/components/LoopStation';
+import VoiceRecorder from '@/components/VoiceRecorder';
+import ProjectManager from '@/components/ProjectManager';
+import WaveformEditor from '@/components/WaveformEditor';
+import ParameterAutomation from '@/components/ParameterAutomation';
+import MetronomeControl from '@/components/MetronomeControl';
+import CloudSync from '@/components/CloudSync';
+import PatternEditor from '@/components/PatternEditor';
+import InstrumentRack from '@/components/InstrumentRack';
+import MasterEQ from '@/components/MasterEQ';
+import CompressorLimiter from '@/components/CompressorLimiter';
+import ReverbHall from '@/components/ReverbHall';
+import DelayEcho from '@/components/DelayEcho';
+import ChorusFlanger from '@/components/ChorusFlanger';
+import Distortion from '@/components/Distortion';
+import FilterSweep from '@/components/FilterSweep';
+import Toolbar from '@/components/Toolbar';
+import StatusBar from '@/components/StatusBar';
 import { 
   Play, 
   Square, 
@@ -23,7 +45,17 @@ import {
   Music,
   Zap,
   Layers,
-  Mic
+  Mic,
+  Sliders,
+  Boxes,
+  Headphones,
+  FileAudio,
+  Gamepad2,
+  RotateCcw,
+  Grid3x3,
+  Cloud,
+  Edit,
+  Waveform
 } from 'lucide-react';
 
 const defaultSynthState: SynthState = {
@@ -82,12 +114,19 @@ export default function SynthesizerStudio() {
   const [showPresets, setShowPresets] = useState(false);
   const [showCosmicWarning, setShowCosmicWarning] = useState(!isCosmicConfigured);
   const [initializationAttempts, setInitializationAttempts] = useState(0);
+  const [globalTransport, setGlobalTransport] = useState({
+    isPlaying: false,
+    isRecording: false,
+    isPaused: false,
+    bpm: 128,
+    masterVolume: 0.7
+  });
 
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize tabs
+  // Initialize tabs with all the new components
   const initialTabs: Tab[] = [
     {
       id: 'keyboard',
@@ -138,6 +177,41 @@ export default function SynthesizerStudio() {
       closable: false
     },
     {
+      id: 'mixer',
+      title: 'Mixer',
+      icon: <Sliders className="w-4 h-4" />,
+      content: <MixerConsole />,
+      closable: false
+    },
+    {
+      id: 'tracks',
+      title: 'Tracks',
+      icon: <Boxes className="w-4 h-4" />,
+      content: <TrackSequencer />,
+      closable: true
+    },
+    {
+      id: 'samples',
+      title: 'Samples',
+      icon: <FileAudio className="w-4 h-4" />,
+      content: <SampleLibrary />,
+      closable: true
+    },
+    {
+      id: 'midi',
+      title: 'MIDI',
+      icon: <Gamepad2 className="w-4 h-4" />,
+      content: <MIDIController />,
+      closable: true
+    },
+    {
+      id: 'loops',
+      title: 'Loops',
+      icon: <RotateCcw className="w-4 h-4" />,
+      content: <LoopStation />,
+      closable: true
+    },
+    {
       id: 'recording',
       title: 'Studio',
       icon: <Mic className="w-4 h-4" />,
@@ -148,10 +222,31 @@ export default function SynthesizerStudio() {
         />
       ),
       closable: false
+    },
+    {
+      id: 'automation',
+      title: 'Automation',
+      icon: <Edit className="w-4 h-4" />,
+      content: <ParameterAutomation />,
+      closable: true
+    },
+    {
+      id: 'waveform',
+      title: 'Waveform',
+      icon: <Waveform className="w-4 h-4" />,
+      content: <WaveformEditor />,
+      closable: true
+    },
+    {
+      id: 'cloud',
+      title: 'Cloud',
+      icon: <Cloud className="w-4 h-4" />,
+      content: <CloudSync />,
+      closable: true
     }
   ];
 
-  const { tabs, activeTabId, setActiveTabId } = useTabs(initialTabs);
+  const { tabs, activeTabId, setActiveTabId, addTab, removeTab } = useTabs(initialTabs);
 
   // Initialize audio engine with better error handling
   const initializeAudioEngine = async (attempt: number = 0) => {
@@ -258,6 +353,35 @@ export default function SynthesizerStudio() {
       audioEngineRef.current.stopNote(frequency);
     }
   }
+
+  // Transport control handlers
+  const handlePlay = () => {
+    setGlobalTransport(prev => ({ ...prev, isPlaying: true, isPaused: false }));
+  };
+
+  const handleStop = () => {
+    setGlobalTransport(prev => ({ ...prev, isPlaying: false, isPaused: false }));
+  };
+
+  const handlePause = () => {
+    setGlobalTransport(prev => ({ ...prev, isPaused: true }));
+  };
+
+  const handleRecord = () => {
+    setGlobalTransport(prev => ({ ...prev, isRecording: !prev.isRecording }));
+  };
+
+  const handleBpmChange = (bpm: number) => {
+    setGlobalTransport(prev => ({ ...prev, bpm }));
+    setDrumState(prev => ({ ...prev, bpm }));
+  };
+
+  const handleVolumeChange = (volume: number) => {
+    setGlobalTransport(prev => ({ ...prev, masterVolume: volume }));
+    if (audioEngineRef.current) {
+      audioEngineRef.current.setMasterVolume(volume);
+    }
+  };
 
   // Handle drum sequencer
   const toggleDrumSequencer = async () => {
@@ -482,10 +606,10 @@ export default function SynthesizerStudio() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-screen flex flex-col">
       {/* Cosmic Configuration Warning */}
       {showCosmicWarning && (
-        <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4">
+        <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 mb-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
@@ -508,77 +632,97 @@ export default function SynthesizerStudio() {
         </div>
       )}
 
-      {/* Global Controls */}
-      <div className="bg-synth-panel p-4 rounded-lg">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleDrumSequencer}
-              className={`synth-button flex items-center gap-2 ${drumState.isPlaying ? 'active' : ''}`}
-              disabled={!audioEngineRef.current?.initialized}
-            >
-              {drumState.isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              {drumState.isPlaying ? 'Stop' : 'Play'} Drums
-            </button>
-            
-            <button
-              onClick={toggleRecording}
-              className={`synth-button flex items-center gap-2 ${recordingState.isRecording ? 'active glow-warning' : ''}`}
-              disabled={!audioEngineRef.current?.initialized}
-            >
-              <div className={`w-3 h-3 rounded-full ${recordingState.isRecording ? 'bg-red-500 recording-indicator' : 'bg-gray-500'}`} />
-              {recordingState.isRecording ? `Recording ${recordingState.duration.toFixed(1)}s` : 'Record'}
-            </button>
-          </div>
+      {/* Professional Toolbar */}
+      <Toolbar
+        isPlaying={globalTransport.isPlaying}
+        isRecording={globalTransport.isRecording}
+        isPaused={globalTransport.isPaused}
+        canUndo={false}
+        canRedo={false}
+        bpm={globalTransport.bpm}
+        masterVolume={globalTransport.masterVolume}
+        onPlay={handlePlay}
+        onStop={handleStop}
+        onPause={handlePause}
+        onRecord={handleRecord}
+        onUndo={() => {}}
+        onRedo={() => {}}
+        onSave={() => setShowPresets(true)}
+        onLoad={() => setShowPresets(true)}
+        onExport={() => {}}
+        onImport={() => {}}
+        onSettings={() => {}}
+        onBpmChange={handleBpmChange}
+        onVolumeChange={handleVolumeChange}
+      />
 
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowPresets(!showPresets)}
-              className="synth-button flex items-center gap-2"
-              disabled={!isCosmicConfigured}
-              title={!isCosmicConfigured ? 'Requires Cosmic CMS configuration' : 'Manage presets'}
-            >
-              <Save className="w-4 h-4" />
-              Presets
-            </button>
-            
-            <button className="synth-button flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
+      {/* Main Workspace */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Panel - Advanced Audio Tools */}
+        <div className="w-80 bg-synth-panel border-r border-gray-800 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            <MetronomeControl />
+            <InstrumentRack />
+            <MasterEQ />
+            <CompressorLimiter />
+            <ReverbHall />
+            <DelayEcho />
+            <ChorusFlanger />
+            <Distortion />
+            <FilterSweep />
           </div>
         </div>
 
-        {/* Audio Engine Status */}
-        {audioEngineRef.current && (
-          <div className="mt-3 pt-3 border-t border-synth-control/20">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>
-                Audio Engine: {audioEngineRef.current.initialized ? 
-                  <span className="text-green-400">Ready</span> : 
-                  <span className="text-yellow-400">Suspended (click to activate)</span>
-                }
-              </span>
-              <span>Context: {audioEngineRef.current.contextState}</span>
+        {/* Center - Main Content Area */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Tab System for Main Content */}
+          <div className="flex-1 bg-synth-panel overflow-hidden">
+            <TabSystem
+              tabs={tabs}
+              activeTabId={activeTabId}
+              onTabChange={setActiveTabId}
+              onTabClose={removeTab}
+              showAddButton={true}
+              scrollable={true}
+              className="h-full"
+            />
+          </div>
+
+          {/* Bottom Panel - Audio Visualizer and Project Manager */}
+          <div className="h-48 bg-synth-panel border-t border-gray-800 flex">
+            <div className="flex-1">
+              <AudioVisualizer audioEngine={audioEngineRef.current} />
+            </div>
+            <div className="w-80 border-l border-gray-800">
+              <ProjectManager />
             </div>
           </div>
-        )}
+        </div>
+
+        {/* Right Panel - Pattern Editor and Voice Recorder */}
+        <div className="w-80 bg-synth-panel border-l border-gray-800 overflow-y-auto">
+          <div className="p-4 space-y-4">
+            <PatternEditor />
+            <VoiceRecorder />
+          </div>
+        </div>
       </div>
 
-      {/* Main Tabbed Interface */}
-      <div className="bg-synth-panel rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 500px)', minHeight: '500px' }}>
-        <TabSystem
-          tabs={tabs}
-          activeTabId={activeTabId}
-          onTabChange={setActiveTabId}
-          showAddButton={false}
-          scrollable={true}
-          className="h-full"
-        />
-      </div>
-
-      {/* Audio Visualizer */}
-      <AudioVisualizer audioEngine={audioEngineRef.current} />
+      {/* Professional Status Bar */}
+      <StatusBar
+        isConnected={true}
+        cpuUsage={25}
+        memoryUsage={45}
+        audioLatency={12}
+        sampleRate={44100}
+        bufferSize={256}
+        activeVoices={3}
+        masterLevel={globalTransport.masterVolume}
+        inputLevel={0.2}
+        projectName="Untitled Project"
+        isDirty={false}
+        messages={[]}
+      />
 
       {/* Preset Manager Modal */}
       {showPresets && isCosmicConfigured && (
