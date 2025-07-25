@@ -1,3 +1,7 @@
+@import '../styles/music-studio-theme.css';
+@import '../styles/modern-theme.css';
+@import '../styles/glass-morphism.css';
+@import '../styles/animations.css';
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -35,45 +39,39 @@
 
 @layer components {
   .synth-knob {
-    @apply relative w-16 h-16 bg-synth-control rounded-full border-2 border-gray-600 cursor-pointer transition-all duration-200 hover:border-synth-accent;
-  }
-
-  .synth-knob::before {
-    content: '';
-    @apply absolute top-1 left-1/2 w-1 h-6 bg-synth-accent rounded-full transform -translate-x-1/2;
-    transform-origin: center bottom;
+    @apply studio-knob;
   }
 
   .synth-button {
-    @apply px-4 py-2 bg-synth-control border border-gray-600 rounded-md text-white hover:bg-synth-accent hover:text-black transition-all duration-200 active:scale-95;
+    @apply studio-button;
   }
 
   .synth-button.active {
-    @apply bg-synth-accent text-black border-synth-accent shadow-lg shadow-synth-accent/30;
+    @apply studio-button active;
   }
 
   .synth-slider {
-    @apply appearance-none w-full h-2 bg-synth-control rounded-lg outline-none;
+    @apply studio-slider-track;
   }
 
   .synth-slider::-webkit-slider-thumb {
-    @apply appearance-none w-4 h-4 bg-synth-accent rounded-full cursor-pointer;
+    @apply studio-slider-thumb;
   }
 
   .synth-slider::-moz-range-thumb {
-    @apply w-4 h-4 bg-synth-accent rounded-full cursor-pointer border-0;
+    @apply studio-slider-thumb;
   }
 
   .drum-pad {
-    @apply w-16 h-16 bg-synth-control border-2 border-gray-600 rounded-lg cursor-pointer transition-all duration-100 hover:border-synth-accent active:bg-synth-accent active:scale-95;
+    @apply studio-drum-pad;
   }
 
   .drum-pad.active {
-    @apply bg-synth-accent border-synth-accent shadow-lg shadow-synth-accent/50;
+    @apply studio-drum-pad active;
   }
 
   .waveform-bar {
-    @apply bg-synth-accent transition-all duration-75 ease-out;
+    @apply bg-studio-cyan transition-all duration-75 ease-out;
   }
 
   .piano-key {
@@ -81,11 +79,11 @@
   }
 
   .piano-key.white {
-    @apply bg-white border border-gray-300 hover:bg-gray-100 active:bg-gray-200;
+    @apply studio-piano-white-key;
   }
 
   .piano-key.black {
-    @apply bg-gray-900 hover:bg-gray-800 active:bg-gray-700;
+    @apply studio-piano-black-key;
   }
 
   .cosmic-button {
@@ -131,15 +129,15 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-synth-panel;
+  @apply bg-studio-panel;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-synth-control rounded-full;
+  @apply bg-studio-control rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-synth-accent;
+  @apply bg-studio-cyan;
 }
 
 /* Animations */
@@ -154,7 +152,7 @@
 
 /* Audio visualization */
 .visualizer-bar {
-  @apply bg-gradient-to-t from-synth-accent to-synth-info;
+  @apply bg-gradient-to-t from-studio-cyan to-studio-green;
   animation: visualizer-pulse 0.1s ease-out;
 }
 

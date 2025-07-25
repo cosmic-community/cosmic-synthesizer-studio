@@ -15,6 +15,18 @@ module.exports = {
         'synth-accent': '#00ff88',
         'synth-warning': '#ff6b6b',
         'synth-info': '#4dabf7',
+        // Professional studio colors
+        'studio-black': '#0a0a0a',
+        'studio-dark': '#151515',
+        'studio-panel': '#1e1e1e',
+        'studio-control': '#2a2a2a',
+        'studio-surface': '#353535',
+        'studio-cyan': '#00d4ff',
+        'studio-green': '#00ff88',
+        'studio-orange': '#ff8c00',
+        'studio-red': '#ff4757',
+        'studio-purple': '#a55eea',
+        'studio-yellow': '#feca57',
         background: 'hsl(var(--background))',
         foreground: 'hsl(var(--foreground))',
         primary: {
@@ -46,6 +58,7 @@ module.exports = {
         'bounce-synth': 'bounce 1s infinite',
         'spin-slow': 'spin 3s linear infinite',
         'glow': 'glow 2s ease-in-out infinite alternate',
+        'studio-shimmer': 'studio-shimmer 3s linear infinite',
       },
       keyframes: {
         glow: {
@@ -55,6 +68,10 @@ module.exports = {
           '100%': { 
             boxShadow: '0 0 10px #00ff88, 0 0 20px #00ff88, 0 0 30px #00ff88',
           },
+        },
+        'studio-shimmer': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
         },
       },
       backdropBlur: {
