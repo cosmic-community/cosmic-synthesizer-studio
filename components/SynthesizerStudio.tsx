@@ -565,11 +565,8 @@ export default function SynthesizerStudio() {
         )}
       </div>
 
-      {/* Audio Visualizer */}
-      <AudioVisualizer audioEngine={audioEngineRef.current} />
-
       {/* Main Tabbed Interface */}
-      <div className="bg-synth-panel rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 400px)', minHeight: '600px' }}>
+      <div className="bg-synth-panel rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 500px)', minHeight: '500px' }}>
         <TabSystem
           tabs={tabs}
           activeTabId={activeTabId}
@@ -579,6 +576,9 @@ export default function SynthesizerStudio() {
           className="h-full"
         />
       </div>
+
+      {/* Audio Visualizer */}
+      <AudioVisualizer audioEngine={audioEngineRef.current} />
 
       {/* Preset Manager Modal */}
       {showPresets && isCosmicConfigured && (
