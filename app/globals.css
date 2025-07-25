@@ -219,11 +219,58 @@
   }
 
   .drum-pad {
-    @apply studio-drum-pad;
+    background: linear-gradient(135deg, 
+      var(--studio-control) 0%, 
+      var(--studio-surface) 50%, 
+      var(--studio-control) 100%);
+    border: 2px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    color: #ffffff;
+    font-family: var(--studio-font-main);
+    font-weight: 600;
+    padding: 16px;
+    box-shadow: 
+      0 4px 12px rgba(0, 0, 0, 0.4),
+      inset 0 2px 4px rgba(255, 255, 255, 0.1);
+    transition: all 0.15s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 60px;
+    min-width: 60px;
+  }
+
+  .drum-pad:hover {
+    transform: translateY(-2px);
+    border-color: var(--studio-cyan);
+    box-shadow: 
+      0 6px 20px rgba(0, 0, 0, 0.5),
+      inset 0 2px 4px rgba(255, 255, 255, 0.15),
+      0 0 25px rgba(0, 212, 255, 0.4);
+  }
+
+  .drum-pad:active {
+    transform: translateY(0);
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.4),
+      inset 0 2px 4px rgba(0, 0, 0, 0.2);
   }
 
   .drum-pad.active {
-    @apply studio-drum-pad active;
+    background: linear-gradient(135deg, 
+      var(--studio-orange) 0%, 
+      var(--studio-red) 100%);
+    border-color: var(--studio-orange);
+    box-shadow: 
+      0 6px 20px rgba(255, 107, 107, 0.5),
+      inset 0 2px 4px rgba(255, 255, 255, 0.2),
+      0 0 30px rgba(255, 107, 107, 0.6);
+    color: #000000;
+    transform: translateY(-1px);
   }
 
   .waveform-bar {
