@@ -106,7 +106,8 @@ const defaultDrumState: DrumSequencerState = {
 };
 
 export default function SynthesizerStudio() {
-  const [synthState, setSynthState] = useState<SynthState>(defaultS>synthState);
+  // Fix for TS7022, TS2552, TS2345, TS2448 errors - properly declare synthState with explicit typing
+  const [synthState, setSynthState] = useState<SynthState>(defaultSynthState);
   const [recordingState, setRecordingState] = useState<RecordingState>(defaultRecordingState);
   const [drumState, setDrumState] = useState<DrumSequencerState>(defaultDrumState);
   const [isLoading, setIsLoading] = useState(true);

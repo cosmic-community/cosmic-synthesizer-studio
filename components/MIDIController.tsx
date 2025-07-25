@@ -19,8 +19,8 @@ export default function MIDIController() {
   const [activeNotes, setActiveNotes] = useState<Set<number>>(new Set());
 
   useEffect(() => {
-    // Check MIDI support
-    if (navigator.requestMIDIAccess) {
+    // Check MIDI support - fix for TS2774 error
+    if (typeof navigator !== 'undefined' && 'requestMIDIAccess' in navigator) {
       setMidiSupported(true);
       initializeMIDI();
     }
