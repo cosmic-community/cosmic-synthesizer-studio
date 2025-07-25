@@ -222,7 +222,7 @@ export class AdvancedAudioProcessor {
       for (let i = 0; i < inputBuffer.length; i++) {
         // Simple spectral filter implementation
         // In a real implementation, you'd use FFT/IFFT
-        outputBuffer[i] = inputBuffer[i] * this.calculateSpectralGain(i, cutoffFrequency, resonance);
+        outputBuffer[i] = (inputBuffer[i] ?? 0) * this.calculateSpectralGain(i, cutoffFrequency, resonance);
       }
     };
 
@@ -356,7 +356,7 @@ export class AdvancedAudioProcessor {
       const outputBuffer = event.outputBuffer.getChannelData(0);
       
       // Implement PSOLA (Pitch Synchronous Overlap and Add) algorithm
-      this.applePitchShift(inputBuffer, outputBuffer, pitchShift, grainSize, overlap, overlapBuffer);
+      this.applyPitchShift(inputBuffer, outputBuffer, pitchShift, grainSize, overlap, overlapBuffer);
     };
 
     const parameters = new Map<string, AudioParam>();
@@ -404,7 +404,7 @@ export class AdvancedAudioProcessor {
     let peak = 0;
     
     for (let i = 0; i < waveformData.length; i++) {
-      const sample = waveformData[i];
+      const sample = waveformData[i] ?? 0;
       rms += sample * sample;
       peak = Math.max(peak, Math.abs(sample));
     }
@@ -416,7 +416,7 @@ export class AdvancedAudioProcessor {
     let magnitudeSum = 0;
     
     for (let i = 0; i < frequencyData.length; i++) {
-      const magnitude = Math.pow(10, frequencyData[i] / 20); // Convert dB to linear
+      const magnitude = Math.pow(10, (frequencyData[i] ?? 0) / 20); // Convert dB to linear
       const frequency = (i * this.context.sampleRate) / (2 * frequencyData.length);
       
       weightedSum += frequency * magnitude;
@@ -430,14 +430,14 @@ export class AdvancedAudioProcessor {
     let totalEnergy = 0;
     
     for (let i = 0; i < frequencyData.length; i++) {
-      totalEnergy += Math.pow(10, frequencyData[i] / 10);
+      totalEnergy += Math.pow(10, (frequencyData[i] ?? 0) / 10);
     }
     
     const targetEnergy = totalEnergy * 0.9;
     let spectralRolloff = 0;
     
     for (let i = 0; i < frequencyData.length; i++) {
-      energySum += Math.pow(10, frequencyData[i] / 10);
+      energySum += Math.pow(10, (frequencyData[i] ?? 0) / 10);
       if (energySum >= targetEnergy) {
         spectralRolloff = (i * this.context.sampleRate) / (2 * frequencyData.length);
         break;
@@ -519,7 +519,7 @@ export class AdvancedAudioProcessor {
     parameters.set('wet', wetGain.gain);
 
     const processor: AudioProcessorNode = {
-      input: filters[0], // Input will be split to all filters
+      input: filters[0] ?? this.context.createGain(), // Input will be split to all filters
       output: output,
       bypass: false,
       parameters
@@ -574,7 +574,7 @@ export class AdvancedAudioProcessor {
     return 1 / (1 + Math.pow(ratio * resonance, 2));
   }
 
-  private applePitchShift(
+  private applyPitchShift(
     input: Float32Array, 
     output: Float32Array, 
     pitchShift: number, 
@@ -592,8 +592,10 @@ export class AdvancedAudioProcessor {
       const fraction = scaledIndex - index;
       
       if (index < input.length - 1) {
+        const currentSample = input[index] ?? 0;
+        const nextSample = input[index + 1] ?? 0;
         // Linear interpolation
-        output[i] = input[index] * (1 - fraction) + input[index + 1] * fraction;
+        output[i] = currentSample * (1 - fraction) + nextSample * fraction;
       } else {
         output[i] = 0;
       }
@@ -608,8 +610,11 @@ export class AdvancedAudioProcessor {
     // Apply mel filter bank
     for (let i = 0; i < numCoefficients; i++) {
       let sum = 0;
-      for (let j = 0; j < frequencyData.length; j++) {
-        sum += frequencyData[j] * melFilters[i][j];
+      const filterBank = melFilters[i];
+      if (filterBank) {
+        for (let j = 0; j < frequencyData.length; j++) {
+          sum += (frequencyData[j] ?? 0) * (filterBank[j] ?? 0);
+        }
       }
       mfcc[i] = Math.log(Math.max(sum, 1e-10));
     }
@@ -619,7 +624,7 @@ export class AdvancedAudioProcessor {
     for (let i = 0; i < numCoefficients; i++) {
       let sum = 0;
       for (let j = 0; j < numCoefficients; j++) {
-        sum += mfcc[j] * Math.cos((Math.PI * i * (j + 0.5)) / numCoefficients);
+        sum += (mfcc[j] ?? 0) * Math.cos((Math.PI * i * (j + 0.5)) / numCoefficients);
       }
       dct[i] = sum;
     }
@@ -643,12 +648,16 @@ export class AdvancedAudioProcessor {
     for (let i = 0; i < numFilters; i++) {
       const filter = new Array(fftSize).fill(0);
       
-      for (let j = binPoints[i]; j < binPoints[i + 1]; j++) {
-        filter[j] = (j - binPoints[i]) / (binPoints[i + 1] - binPoints[i]);
+      const leftBin = binPoints[i] ?? 0;
+      const centerBin = binPoints[i + 1] ?? 0;
+      const rightBin = binPoints[i + 2] ?? 0;
+      
+      for (let j = leftBin; j < centerBin; j++) {
+        filter[j] = (j - leftBin) / (centerBin - leftBin);
       }
       
-      for (let j = binPoints[i + 1]; j < binPoints[i + 2]; j++) {
-        filter[j] = (binPoints[i + 2] - j) / (binPoints[i + 2] - binPoints[i + 1]);
+      for (let j = centerBin; j < rightBin; j++) {
+        filter[j] = (rightBin - j) / (rightBin - centerBin);
       }
       
       melFilters.push(filter);

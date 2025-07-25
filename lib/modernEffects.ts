@@ -356,7 +356,10 @@ export class ModernChorus {
       delay.connect(this.feedback);
     });
     
-    this.feedback.connect(this.delays[0]);
+    const firstDelay = this.delays[0];
+    if (firstDelay) {
+      this.feedback.connect(firstDelay);
+    }
     this.wetGain.connect(this.output);
     
     // Set initial levels

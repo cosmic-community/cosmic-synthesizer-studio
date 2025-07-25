@@ -65,7 +65,7 @@ export default function DragDropZone({
       }
       if (acceptType.includes('*')) {
         const baseType = acceptType.split('/')[0];
-        return file.type.startsWith(baseType);
+        return file.type.startsWith(baseType || '');
       }
       return file.type === acceptType;
     });
@@ -112,7 +112,7 @@ export default function DragDropZone({
     if (valid.length === 0) return;
 
     const fileInfos: FileUploadInfo[] = await Promise.all(
-      valid.map(async (file) => {
+      valid.filter(file => file != null).map(async (file) => {
         const id = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         let preview: string | undefined;
 
@@ -185,16 +185,16 @@ export default function DragDropZone({
 
     if (disabled) return;
 
-    const files = Array.from(e.dataTransfer?.files || []);
+    const files = Array.from(e.dataTransfer?.files || []).filter(file => file != null);
     if (files.length > 0) {
-      processFiles(multiple ? files : [files[0]]);
+      processFiles(multiple ? files : [files[0]].filter(f => f != null));
     }
   }, [disabled, multiple, processFiles]);
 
   const handleFileInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(e.target.files || []);
+    const files = Array.from(e.target.files || []).filter(file => file != null);
     if (files.length > 0) {
-      processFiles(multiple ? files : [files[0]]);
+      processFiles(multiple ? files : [files[0]].filter(f => f != null));
     }
     
     // Reset input value to allow selecting the same file again
@@ -234,7 +234,7 @@ export default function DragDropZone({
     const sizes = ['B', 'KB', 'MB', 'GB'];
     const i = Math.floor(Math.log(bytes) / Math.log(k));
     
-    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i]}`;
+    return `${parseFloat((bytes / Math.pow(k, i)).toFixed(1))} ${sizes[i] || 'B'}`;
   };
 
   const getFileIcon = (fileType: string) => {

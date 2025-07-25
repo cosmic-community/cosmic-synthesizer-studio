@@ -53,9 +53,9 @@ export default function AnimatedBackground({
   const hexToRgb = useCallback((hex: string) => {
     const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
     return result ? {
-      r: parseInt(result[1], 16),
-      g: parseInt(result[2], 16),
-      b: parseInt(result[3], 16)
+      r: parseInt(result[1] || '00', 16),
+      g: parseInt(result[2] || '00', 16),
+      b: parseInt(result[3] || '00', 16)
     } : { r: 0, g: 255, b: 136 };
   }, []);
 
@@ -197,9 +197,11 @@ export default function AnimatedBackground({
         ctx.moveTo(point.x, point.y);
       } else {
         const prevPoint = wavesRef.current[index - 1];
-        const cpx = (prevPoint.x + point.x) / 2;
-        const cpy = (prevPoint.y + point.y) / 2;
-        ctx.quadraticCurveTo(prevPoint.x, prevPoint.y, cpx, cpy);
+        if (prevPoint) {
+          const cpx = (prevPoint.x + point.x) / 2;
+          const cpy = (prevPoint.y + point.y) / 2;
+          ctx.quadraticCurveTo(prevPoint.x, prevPoint.y, cpx, cpy);
+        }
       }
     });
     ctx.stroke();
@@ -223,11 +225,13 @@ export default function AnimatedBackground({
           ctx.moveTo(point.x, y);
         } else {
           const prevPoint = wavesRef.current[index - 1];
-          const prevOffset = Math.sin(time * (1 + i * 0.2) + prevPoint.phase) * prevPoint.amplitude * 0.5;
-          const prevY = prevPoint.baseY + prevOffset + (i * 30);
-          const cpx = (prevPoint.x + point.x) / 2;
-          const cpy = (prevY + y) / 2;
-          ctx.quadraticCurveTo(prevPoint.x, prevY, cpx, cpy);
+          if (prevPoint) {
+            const prevOffset = Math.sin(time * (1 + i * 0.2) + prevPoint.phase) * prevPoint.amplitude * 0.5;
+            const prevY = prevPoint.baseY + prevOffset + (i * 30);
+            const cpx = (prevPoint.x + point.x) / 2;
+            const cpy = (prevY + y) / 2;
+            ctx.quadraticCurveTo(prevPoint.x, prevY, cpx, cpy);
+          }
         }
       });
       ctx.stroke();

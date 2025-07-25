@@ -11,7 +11,7 @@ import {
   Square,
   RotateCcw
 } from 'lucide-react';
-import { MixerChannel } from './MixerBoard';
+import { MixerChannel } from '@/types';
 
 interface ChannelMetering {
   peak: number;
@@ -112,7 +112,7 @@ export default function ChannelStrip({
         <div>
           <label className="block text-xs text-gray-400 mb-1">Input</label>
           <select
-            value={channel.input}
+            value={channel.input || ''}
             onChange={(e) => onUpdate({ input: e.target.value })}
             className="w-full text-xs p-1 bg-synth-panel border border-gray-600 rounded text-white"
           >
@@ -127,7 +127,7 @@ export default function ChannelStrip({
         <div>
           <label className="block text-xs text-gray-400 mb-1">Output</label>
           <select
-            value={channel.output}
+            value={channel.output || ''}
             onChange={(e) => onUpdate({ output: e.target.value })}
             className="w-full text-xs p-1 bg-synth-panel border border-gray-600 rounded text-white"
           >
@@ -156,16 +156,21 @@ export default function ChannelStrip({
           <div className="space-y-2">
             <div>
               <label className="block text-xs text-gray-400">
-                High: {channel.eq.high > 0 ? '+' : ''}{channel.eq.high}dB
+                High: {channel.eq?.high ?? 0 > 0 ? '+' : ''}{channel.eq?.high ?? 0}dB
               </label>
               <input
                 type="range"
                 min="-12"
                 max="12"
                 step="0.5"
-                value={channel.eq.high}
+                value={channel.eq?.high ?? 0}
                 onChange={(e) => onUpdate({ 
-                  eq: { ...channel.eq, high: Number(e.target.value) }
+                  eq: { 
+                    ...channel.eq, 
+                    high: Number(e.target.value),
+                    mid: channel.eq?.mid ?? 0,
+                    low: channel.eq?.low ?? 0
+                  }
                 })}
                 className="w-full h-1 synth-slider"
               />
@@ -173,16 +178,21 @@ export default function ChannelStrip({
             
             <div>
               <label className="block text-xs text-gray-400">
-                Mid: {channel.eq.mid > 0 ? '+' : ''}{channel.eq.mid}dB
+                Mid: {channel.eq?.mid ?? 0 > 0 ? '+' : ''}{channel.eq?.mid ?? 0}dB
               </label>
               <input
                 type="range"
                 min="-12"
                 max="12"
                 step="0.5"
-                value={channel.eq.mid}
+                value={channel.eq?.mid ?? 0}
                 onChange={(e) => onUpdate({ 
-                  eq: { ...channel.eq, mid: Number(e.target.value) }
+                  eq: { 
+                    ...channel.eq, 
+                    mid: Number(e.target.value),
+                    high: channel.eq?.high ?? 0,
+                    low: channel.eq?.low ?? 0
+                  }
                 })}
                 className="w-full h-1 synth-slider"
               />
@@ -190,16 +200,21 @@ export default function ChannelStrip({
             
             <div>
               <label className="block text-xs text-gray-400">
-                Low: {channel.eq.low > 0 ? '+' : ''}{channel.eq.low}dB
+                Low: {channel.eq?.low ?? 0 > 0 ? '+' : ''}{channel.eq?.low ?? 0}dB
               </label>
               <input
                 type="range"
                 min="-12"
                 max="12"
                 step="0.5"
-                value={channel.eq.low}
+                value={channel.eq?.low ?? 0}
                 onChange={(e) => onUpdate({ 
-                  eq: { ...channel.eq, low: Number(e.target.value) }
+                  eq: { 
+                    ...channel.eq, 
+                    low: Number(e.target.value),
+                    high: channel.eq?.high ?? 0,
+                    mid: channel.eq?.mid ?? 0
+                  }
                 })}
                 className="w-full h-1 synth-slider"
               />
@@ -216,16 +231,21 @@ export default function ChannelStrip({
           <div className="space-y-2">
             <div>
               <label className="block text-xs text-gray-400">
-                Reverb: {Math.round(channel.sends.reverb * 100)}%
+                Reverb: {Math.round((channel.sends?.reverb ?? 0) * 100)}%
               </label>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.01"
-                value={channel.sends.reverb}
+                value={channel.sends?.reverb ?? 0}
                 onChange={(e) => onUpdate({ 
-                  sends: { ...channel.sends, reverb: Number(e.target.value) }
+                  sends: { 
+                    ...channel.sends, 
+                    reverb: Number(e.target.value),
+                    delay: channel.sends?.delay ?? 0,
+                    chorus: channel.sends?.chorus ?? 0
+                  }
                 })}
                 className="w-full h-1 synth-slider"
               />
@@ -233,16 +253,21 @@ export default function ChannelStrip({
             
             <div>
               <label className="block text-xs text-gray-400">
-                Delay: {Math.round(channel.sends.delay * 100)}%
+                Delay: {Math.round((channel.sends?.delay ?? 0) * 100)}%
               </label>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.01"
-                value={channel.sends.delay}
+                value={channel.sends?.delay ?? 0}
                 onChange={(e) => onUpdate({ 
-                  sends: { ...channel.sends, delay: Number(e.target.value) }
+                  sends: { 
+                    ...channel.sends, 
+                    delay: Number(e.target.value),
+                    reverb: channel.sends?.reverb ?? 0,
+                    chorus: channel.sends?.chorus ?? 0
+                  }
                 })}
                 className="w-full h-1 synth-slider"
               />
@@ -250,16 +275,21 @@ export default function ChannelStrip({
             
             <div>
               <label className="block text-xs text-gray-400">
-                Chorus: {Math.round(channel.sends.chorus * 100)}%
+                Chorus: {Math.round((channel.sends?.chorus ?? 0) * 100)}%
               </label>
               <input
                 type="range"
                 min="0"
                 max="1"
                 step="0.01"
-                value={channel.sends.chorus}
+                value={channel.sends?.chorus ?? 0}
                 onChange={(e) => onUpdate({ 
-                  sends: { ...channel.sends, chorus: Number(e.target.value) }
+                  sends: { 
+                    ...channel.sends, 
+                    chorus: Number(e.target.value),
+                    reverb: channel.sends?.reverb ?? 0,
+                    delay: channel.sends?.delay ?? 0
+                  }
                 })}
                 className="w-full h-1 synth-slider"
               />

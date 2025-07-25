@@ -15,16 +15,7 @@ import {
   Clock
 } from 'lucide-react';
 import { clsx } from 'clsx';
-
-export interface Tab {
-  id: string;
-  title: string;
-  icon?: React.ReactNode;
-  content: React.ReactNode;
-  closable?: boolean;
-  modified?: boolean;
-  disabled?: boolean;
-}
+import { Tab } from '@/types';
 
 interface TabSystemProps {
   tabs: Tab[];
@@ -254,7 +245,9 @@ export default function TabSystem({
 
     const newTabs = [...tabs];
     const [draggedTab] = newTabs.splice(draggedIndex, 1);
-    newTabs.splice(targetIndex, 0, draggedTab);
+    if (draggedTab) {
+      newTabs.splice(targetIndex, 0, draggedTab);
+    }
     
     onTabReorder(newTabs);
     setDragOverTab(null);
@@ -401,7 +394,7 @@ export const studioTabs = {
 export function useTabs(initialTabs: Tab[] = []) {
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [activeTabId, setActiveTabId] = useState<string>(
-    initialTabs.length > 0 ? initialTabs[0].id : ''
+    initialTabs.length > 0 ? initialTabs[0]?.id || '' : ''
   );
 
   const addTab = (tab: Tab) => {
@@ -417,7 +410,10 @@ export function useTabs(initialTabs: Tab[] = []) {
       if (tabId === activeTabId && newTabs.length > 0) {
         const currentIndex = prev.findIndex(tab => tab.id === tabId);
         const nextIndex = Math.min(currentIndex, newTabs.length - 1);
-        setActiveTabId(newTabs[nextIndex].id);
+        const nextTab = newTabs[nextIndex];
+        if (nextTab) {
+          setActiveTabId(nextTab.id);
+        }
       }
       
       return newTabs;

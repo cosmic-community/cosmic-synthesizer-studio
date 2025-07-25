@@ -91,7 +91,7 @@ export function useAudioAnalyzer(
     
     for (let i = 0; i < frequencyData.length; i++) {
       const freq = i * binWidth;
-      const mag = Math.pow(10, frequencyData[i] / 20); // dB to linear
+      const mag = Math.pow(10, (frequencyData[i] ?? 0) / 20); // dB to linear
       magnitudes[i] = mag;
       
       weightedSum += freq * mag;
@@ -104,7 +104,7 @@ export function useAudioAnalyzer(
     let spreadSum = 0;
     for (let i = 0; i < frequencyData.length; i++) {
       const freq = i * binWidth;
-      const mag = magnitudes[i];
+      const mag = magnitudes[i] ?? 0;
       spreadSum += Math.pow(freq - spectralCentroid, 2) * mag;
     }
     
@@ -115,14 +115,16 @@ export function useAudioAnalyzer(
     let totalEnergy = 0;
     
     for (let i = 0; i < magnitudes.length; i++) {
-      totalEnergy += magnitudes[i] * magnitudes[i];
+      const mag = magnitudes[i] ?? 0;
+      totalEnergy += mag * mag;
     }
     
     const targetEnergy = totalEnergy * 0.85;
     let spectralRolloff = 0;
     
     for (let i = 0; i < magnitudes.length; i++) {
-      energySum += magnitudes[i] * magnitudes[i];
+      const mag = magnitudes[i] ?? 0;
+      energySum += mag * mag;
       if (energySum >= targetEnergy) {
         spectralRolloff = i * binWidth;
         break;
@@ -140,7 +142,7 @@ export function useAudioAnalyzer(
     let previousSample = 0;
     
     for (let i = 0; i < timeDomainData.length; i++) {
-      const sample = timeDomainData[i];
+      const sample = timeDomainData[i] ?? 0;
       
       // RMS calculation
       rms += sample * sample;
@@ -183,7 +185,7 @@ export function useAudioAnalyzer(
     // Calculate volume (average of frequency data)
     let sum = 0;
     for (let i = 0; i < frequencyData.length; i++) {
-      sum += frequencyData[i];
+      sum += frequencyData[i] ?? 0;
     }
     const volume = sum / frequencyData.length / 255;
     
@@ -280,7 +282,7 @@ export function useAudioAnalyzer(
     
     const result: number[] = [];
     for (let i = startBin; i <= endBin && i < data.floatFrequencyData.length; i++) {
-      result.push(data.floatFrequencyData[i]);
+      result.push(data.floatFrequencyData[i] ?? 0);
     }
     
     return result;
@@ -294,8 +296,9 @@ export function useAudioAnalyzer(
     let peakIndex = 0;
     
     for (let i = 0; i < data.floatFrequencyData.length; i++) {
-      if (data.floatFrequencyData[i] > maxMagnitude) {
-        maxMagnitude = data.floatFrequencyData[i];
+      const magnitude = data.floatFrequencyData[i] ?? -Infinity;
+      if (magnitude > maxMagnitude) {
+        maxMagnitude = magnitude;
         peakIndex = i;
       }
     }
@@ -418,8 +421,10 @@ export function usePitchDetection(
       let normalization = 0;
       
       for (let i = 0; i < timeDomainData.length - period; i++) {
-        correlation += timeDomainData[i] * timeDomainData[i + period];
-        normalization += timeDomainData[i] * timeDomainData[i];
+        const currentSample = timeDomainData[i] ?? 0;
+        const delayedSample = timeDomainData[i + period] ?? 0;
+        correlation += currentSample * delayedSample;
+        normalization += currentSample * currentSample;
       }
       
       if (normalization > 0) {
