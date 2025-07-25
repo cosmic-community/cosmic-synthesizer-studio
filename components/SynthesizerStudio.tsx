@@ -11,7 +11,20 @@ import DrumSequencer from '@/components/DrumSequencer';
 import RecordingControls from '@/components/RecordingControls';
 import AudioVisualizer from '@/components/AudioVisualizer';
 import PresetManager from '@/components/PresetManager';
-import { Play, Square, Save, Settings, AlertTriangle, RefreshCw } from 'lucide-react';
+import TabSystem, { Tab, useTabs } from '@/components/TabSystem';
+import { 
+  Play, 
+  Square, 
+  Save, 
+  Settings, 
+  AlertTriangle, 
+  RefreshCw,
+  Piano,
+  Music,
+  Zap,
+  Layers,
+  Mic
+} from 'lucide-react';
 
 const defaultSynthState: SynthState = {
   oscillatorType: 'sawtooth',
@@ -73,6 +86,72 @@ export default function SynthesizerStudio() {
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Initialize tabs
+  const initialTabs: Tab[] = [
+    {
+      id: 'keyboard',
+      title: 'Keyboard',
+      icon: <Piano className="w-4 h-4" />,
+      content: (
+        <PianoKeyboard 
+          onKeyPress={handleKeyPress}
+          onKeyRelease={handleKeyRelease}
+        />
+      ),
+      closable: false
+    },
+    {
+      id: 'sequencer',
+      title: 'Drums',
+      icon: <Music className="w-4 h-4" />,
+      content: (
+        <DrumSequencer 
+          drumState={drumState} 
+          onStateChange={setDrumState} 
+        />
+      ),
+      closable: false
+    },
+    {
+      id: 'synthesizer',
+      title: 'Synth',
+      icon: <Zap className="w-4 h-4" />,
+      content: (
+        <SynthControls 
+          synthState={synthState} 
+          onStateChange={setSynthState} 
+        />
+      ),
+      closable: false
+    },
+    {
+      id: 'effects',
+      title: 'Effects',
+      icon: <Layers className="w-4 h-4" />,
+      content: (
+        <EffectsRack 
+          synthState={synthState} 
+          onStateChange={setSynthState} 
+        />
+      ),
+      closable: false
+    },
+    {
+      id: 'recording',
+      title: 'Studio',
+      icon: <Mic className="w-4 h-4" />,
+      content: (
+        <RecordingControls 
+          recordingState={recordingState}
+          onStateChange={setRecordingState}
+        />
+      ),
+      closable: false
+    }
+  ];
+
+  const { tabs, activeTabId, setActiveTabId } = useTabs(initialTabs);
 
   // Initialize audio engine with better error handling
   const initializeAudioEngine = async (attempt: number = 0) => {
@@ -166,19 +245,19 @@ export default function SynthesizerStudio() {
   }, []);
 
   // Handle key press for piano
-  const handleKeyPress = (frequency: number) => {
+  function handleKeyPress(frequency: number) {
     if (audioEngineRef.current && audioEngineRef.current.initialized) {
       audioEngineRef.current.playNote(frequency, synthState);
     } else {
       handleUserInteraction();
     }
-  };
+  }
 
-  const handleKeyRelease = (frequency: number) => {
+  function handleKeyRelease(frequency: number) {
     if (audioEngineRef.current && audioEngineRef.current.initialized) {
       audioEngineRef.current.stopNote(frequency);
     }
-  };
+  }
 
   // Handle drum sequencer
   const toggleDrumSequencer = async () => {
@@ -429,7 +508,7 @@ export default function SynthesizerStudio() {
         </div>
       )}
 
-      {/* Header Controls */}
+      {/* Global Controls */}
       <div className="bg-synth-panel p-4 rounded-lg">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-4">
@@ -489,39 +568,16 @@ export default function SynthesizerStudio() {
       {/* Audio Visualizer */}
       <AudioVisualizer audioEngine={audioEngineRef.current} />
 
-      {/* Piano Keyboard - moved higher up */}
-      <PianoKeyboard 
-        onKeyPress={handleKeyPress}
-        onKeyRelease={handleKeyRelease}
-      />
-
-      {/* Drum Sequencer - horizontal layout */}
-      <DrumSequencer 
-        drumState={drumState} 
-        onStateChange={setDrumState} 
-      />
-
-      {/* Main Studio Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Synthesizer Controls */}
-        <div className="space-y-6">
-          <SynthControls 
-            synthState={synthState} 
-            onStateChange={setSynthState} 
-          />
-        </div>
-
-        {/* Right Column - Effects and Recording */}
-        <div className="space-y-6">
-          <EffectsRack 
-            synthState={synthState} 
-            onStateChange={setSynthState} 
-          />
-          <RecordingControls 
-            recordingState={recordingState}
-            onStateChange={setRecordingState}
-          />
-        </div>
+      {/* Main Tabbed Interface */}
+      <div className="bg-synth-panel rounded-lg overflow-hidden" style={{ height: 'calc(100vh - 400px)', minHeight: '600px' }}>
+        <TabSystem
+          tabs={tabs}
+          activeTabId={activeTabId}
+          onTabChange={setActiveTabId}
+          showAddButton={false}
+          scrollable={true}
+          className="h-full"
+        />
       </div>
 
       {/* Preset Manager Modal */}

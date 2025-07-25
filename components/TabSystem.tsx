@@ -73,12 +73,12 @@ function TabHeader({
   return (
     <div
       className={clsx(
-        'relative flex items-center gap-2 px-4 py-2 rounded-t-lg',
+        'relative flex items-center gap-2 px-4 py-3 rounded-t-lg',
         'transition-all duration-200 cursor-pointer select-none',
         'border-b-2 min-w-0 max-w-48',
         isActive
-          ? 'glass-panel border-synth-accent bg-synth-panel/80'
-          : 'glass-light border-transparent hover:border-synth-accent/50 hover:bg-synth-control/50',
+          ? 'bg-synth-panel border-synth-accent text-white shadow-lg'
+          : 'bg-synth-control border-transparent hover:border-synth-accent/50 hover:bg-synth-panel/50 text-gray-300',
         tab.disabled && 'opacity-50 cursor-not-allowed',
         className
       )}
@@ -262,16 +262,16 @@ export default function TabSystem({
 
   return (
     <div className={clsx(
-      'flex flex-col bg-synth-bg',
+      'flex flex-col bg-synth-bg h-full',
       className
     )}>
       {/* Tab headers */}
-      <div className="flex items-center bg-synth-panel/50 border-b border-white/10">
+      <div className="flex items-center bg-synth-bg border-b border-white/10 flex-shrink-0">
         {/* Left scroll button */}
         {scrollable && canScrollLeft && (
           <button
             onClick={() => scroll('left')}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition-colors"
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition-colors bg-synth-control hover:bg-synth-panel"
             title="Scroll left"
           >
             <ChevronLeft className="w-4 h-4" />
@@ -319,7 +319,7 @@ export default function TabSystem({
         {scrollable && canScrollRight && (
           <button
             onClick={() => scroll('right')}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition-colors"
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition-colors bg-synth-control hover:bg-synth-panel"
             title="Scroll right"
           >
             <ChevronRight className="w-4 h-4" />
@@ -330,7 +330,7 @@ export default function TabSystem({
         {showAddButton && onTabAdd && tabs.length < maxTabs && (
           <button
             onClick={handleTabAdd}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-synth-accent transition-colors"
+            className="flex-shrink-0 p-2 text-gray-400 hover:text-synth-accent transition-colors bg-synth-control hover:bg-synth-panel"
             title="Add new tab"
           >
             <Plus className="w-4 h-4" />
@@ -339,11 +339,11 @@ export default function TabSystem({
       </div>
 
       {/* Tab content */}
-      <div className="flex-1 relative">
+      <div className="flex-1 relative overflow-hidden">
         {activeTab ? (
           <div 
             key={activeTab.id}
-            className="absolute inset-0 animate-fade-in-scale"
+            className="absolute inset-0 p-6 overflow-y-auto animate-fade-in-scale"
           >
             {activeTab.content}
           </div>
