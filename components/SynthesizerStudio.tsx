@@ -505,10 +505,7 @@ export default function SynthesizerStudio({
         )}
       </div>
 
-      {/* Audio Visualizer */}
-      <AudioVisualizer audioEngine={audioEngineRef.current} />
-
-      {/* Tab System for different studio sections - MOVED TO TOP */}
+      {/* Tab System for different studio sections - MOVED ABOVE AUDIO VISUALIZER */}
       <div className="bg-synth-panel rounded-lg overflow-hidden">
         {/* Tab navigation */}
         <div className="flex border-b border-synth-control/30">
@@ -637,7 +634,10 @@ export default function SynthesizerStudio({
         </div>
       </div>
 
-      {/* Piano Keyboard - MOVED TO BOTTOM */}
+      {/* Audio Visualizer - MOVED BELOW TAB SYSTEM */}
+      <AudioVisualizer audioEngine={audioEngineRef.current} />
+
+      {/* Piano Keyboard - REMAINS AT BOTTOM */}
       <PianoKeyboard 
         onKeyPress={handleKeyPress}
         onKeyRelease={handleKeyRelease}
