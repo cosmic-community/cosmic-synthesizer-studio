@@ -68,9 +68,39 @@ export interface DrumSequencerState {
   bpm: number;
   pattern?: boolean[][];
   selectedSound: number;
-  sounds?: DrumSound[];
+  sounds?: DrumSoundConfig[];
 }
 
+// Enhanced DrumSound interface with advanced parameters
+export interface DrumSoundConfig {
+  name: string;
+  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'crash' | 'ride' | 'clap' | 'perc' | 'cymbal' | 'tom';
+  frequency: number;
+  decay: number;
+  volume?: number;
+  pitch?: number;
+  resonance?: number;
+  distortion?: number;
+  reverb?: number;
+  compression?: number;
+  oscillatorType?: OscillatorType;
+  filterType?: 'lowpass' | 'highpass' | 'bandpass' | 'notch';
+  filterFrequency?: number;
+  envelope?: {
+    attack: number;
+    decay: number;
+    sustain: number;
+    release: number;
+  };
+  noise?: {
+    amount: number;
+    frequency: number;
+  };
+  color?: string;
+  category?: string;
+}
+
+// Legacy DrumSound interface for compatibility
 export interface DrumSound {
   name: string;
   type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'crash' | 'ride';
