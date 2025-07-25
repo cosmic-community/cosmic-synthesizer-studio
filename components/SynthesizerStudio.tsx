@@ -19,7 +19,7 @@ import {
   Settings, 
   AlertTriangle, 
   RefreshCw,
-  Piano,
+  Music4,
   Music,
   Zap,
   Layers,
@@ -92,7 +92,7 @@ export default function SynthesizerStudio() {
     {
       id: 'keyboard',
       title: 'Keyboard',
-      icon: <Piano className="w-4 h-4" />,
+      icon: <Music4 className="w-4 h-4" />,
       content: (
         <PianoKeyboard 
           onKeyPress={handleKeyPress}
