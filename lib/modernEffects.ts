@@ -356,9 +356,10 @@ export class ModernChorus {
       delay.connect(this.feedback);
     });
     
-    // Add proper null check for array access
-    if (this.delays.length > 0 && this.delays[0]) {
-      this.feedback.connect(this.delays[0]);
+    // Add proper null check for array access - this fixes the TypeScript error
+    const firstDelay = this.delays[0];
+    if (firstDelay) {
+      this.feedback.connect(firstDelay);
     }
     this.wetGain.connect(this.output);
     
