@@ -448,9 +448,9 @@ export default function SynthesizerStudio({
         </div>
       )}
 
-      {/* Header Controls */}
+      {/* Header Controls with Compact Audio Visualizer */}
       <div className="bg-synth-panel p-4 rounded-lg">
-        <div className="flex flex-wrap items-center justify-between gap-4">
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
           <div className="flex items-center gap-4">
             <button
               onClick={toggleDrumSequencer}
@@ -469,6 +469,11 @@ export default function SynthesizerStudio({
               <div className={`w-3 h-3 rounded-full ${recordingState.isRecording ? 'bg-red-500 recording-indicator' : 'bg-gray-500'}`} />
               {recordingState.isRecording ? `Recording ${recordingState.duration.toFixed(1)}s` : 'Record'}
             </button>
+          </div>
+
+          {/* Compact Audio Visualizer positioned in the center gap */}
+          <div className="flex-1 flex justify-center max-w-xs">
+            <AudioVisualizer audioEngine={audioEngineRef.current} compact={true} />
           </div>
 
           <div className="flex items-center gap-2">
@@ -491,7 +496,7 @@ export default function SynthesizerStudio({
 
         {/* Audio Engine Status */}
         {audioEngineRef.current && (
-          <div className="mt-3 pt-3 border-t border-synth-control/20">
+          <div className="pt-3 border-t border-synth-control/20">
             <div className="flex items-center justify-between text-xs text-gray-400">
               <span>
                 Audio Engine: {audioEngineRef.current.initialized ? 
@@ -505,7 +510,7 @@ export default function SynthesizerStudio({
         )}
       </div>
 
-      {/* Tab System for different studio sections - MOVED ABOVE AUDIO VISUALIZER */}
+      {/* Tab System for different studio sections */}
       <div className="bg-synth-panel rounded-lg overflow-hidden">
         {/* Tab navigation */}
         <div className="flex border-b border-synth-control/30">
@@ -633,9 +638,6 @@ export default function SynthesizerStudio({
           )}
         </div>
       </div>
-
-      {/* Audio Visualizer - MOVED BELOW TAB SYSTEM */}
-      <AudioVisualizer audioEngine={audioEngineRef.current} />
 
       {/* Piano Keyboard - REMAINS AT BOTTOM */}
       <PianoKeyboard 
