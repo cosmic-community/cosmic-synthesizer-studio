@@ -66,7 +66,7 @@ interface SynthesizerStudioProps {
 }
 
 export default function SynthesizerStudio({ 
-  initialTab = 'synthesizer',
+  initialTab = 'drums',
   onTabChange 
 }: SynthesizerStudioProps) {
   const [synthState, setSynthState] = useState<SynthState>(defaultSynthState);
@@ -512,16 +512,39 @@ export default function SynthesizerStudio({
         onKeyRelease={handleKeyRelease}
       />
 
-      {/* Tab content area */}
+      {/* Main synthesizer controls grid - always visible */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Left column - Synthesizer Controls */}
+        <div className="bg-synth-panel p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            🎛️ Synthesizer
+          </h3>
+          <SynthControls 
+            synthState={synthState} 
+            onStateChange={setSynthState} 
+          />
+        </div>
+
+        {/* Right column - Effects Rack */}
+        <div className="bg-synth-panel p-6 rounded-lg">
+          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+            ✨ Effects
+          </h3>
+          <EffectsRack 
+            synthState={synthState} 
+            onStateChange={setSynthState} 
+          />
+        </div>
+      </div>
+
+      {/* Additional tools tabs */}
       <div className="bg-synth-panel rounded-lg overflow-hidden">
         {/* Tab navigation */}
         <div className="flex border-b border-synth-control/30">
           {[
-            { id: 'synthesizer', label: 'Synthesizer', icon: '🎛️' },
-            { id: 'mixer', label: 'Mixer', icon: '🎚️' },
             { id: 'drums', label: 'Drums', icon: '🥁' },
-            { id: 'effects', label: 'Effects', icon: '✨' },
-            { id: 'recording', label: 'Recording', icon: '🎙️' }
+            { id: 'recording', label: 'Recording', icon: '🎙️' },
+            { id: 'mixer', label: 'Mixer', icon: '🎚️' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -540,37 +563,11 @@ export default function SynthesizerStudio({
 
         {/* Tab content */}
         <div className="p-6">
-          {activeTab === 'synthesizer' && (
-            <div className="space-y-6">
-              <SynthControls 
-                synthState={synthState} 
-                onStateChange={setSynthState} 
-              />
-            </div>
-          )}
-
-          {activeTab === 'mixer' && (
-            <div className="text-center text-gray-400 py-12">
-              <div className="text-4xl mb-4">🎚️</div>
-              <h3 className="text-xl font-semibold mb-2">Mixer Panel</h3>
-              <p>Advanced mixing controls coming soon...</p>
-            </div>
-          )}
-
           {activeTab === 'drums' && (
             <div className="space-y-6">
               <DrumSequencer 
                 drumState={drumState} 
                 onStateChange={setDrumState} 
-              />
-            </div>
-          )}
-
-          {activeTab === 'effects' && (
-            <div className="space-y-6">
-              <EffectsRack 
-                synthState={synthState} 
-                onStateChange={setSynthState} 
               />
             </div>
           )}
@@ -581,6 +578,14 @@ export default function SynthesizerStudio({
                 recordingState={recordingState}
                 onStateChange={setRecordingState}
               />
+            </div>
+          )}
+
+          {activeTab === 'mixer' && (
+            <div className="text-center text-gray-400 py-12">
+              <div className="text-4xl mb-4">🎚️</div>
+              <h3 className="text-xl font-semibold mb-2">Mixer Panel</h3>
+              <p>Advanced mixing controls coming soon...</p>
             </div>
           )}
         </div>
