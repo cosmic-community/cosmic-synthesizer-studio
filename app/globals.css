@@ -38,6 +38,54 @@
 }
 
 @layer components {
+  .studio-button {
+    background: linear-gradient(135deg, 
+      var(--studio-control) 0%, 
+      var(--studio-surface) 50%, 
+      var(--studio-control) 100%);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #ffffff;
+    font-family: var(--studio-font-main);
+    font-weight: 500;
+    padding: 8px 16px;
+    box-shadow: 
+      0 2px 8px rgba(0, 0, 0, 0.3),
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .studio-button:hover {
+    transform: translateY(-1px);
+    border-color: var(--studio-cyan);
+    box-shadow: 
+      0 4px 16px rgba(0, 0, 0, 0.4),
+      inset 0 1px 1px rgba(255, 255, 255, 0.15),
+      0 0 20px rgba(0, 212, 255, 0.6);
+  }
+
+  .studio-button:active {
+    transform: translateY(0);
+    box-shadow: 
+      0 1px 4px rgba(0, 0, 0, 0.3),
+      inset 0 1px 1px rgba(255, 255, 255, 0.1);
+  }
+
+  .studio-button.active {
+    background: linear-gradient(135deg, 
+      var(--studio-cyan) 0%, 
+      var(--studio-green) 100%);
+    border-color: var(--studio-cyan);
+    box-shadow: 
+      0 4px 16px rgba(0, 212, 255, 0.4),
+      inset 0 1px 1px rgba(255, 255, 255, 0.2),
+      0 0 20px rgba(0, 212, 255, 0.6);
+    color: #000000;
+    font-weight: 600;
+  }
+
   .synth-knob {
     @apply studio-knob;
   }
