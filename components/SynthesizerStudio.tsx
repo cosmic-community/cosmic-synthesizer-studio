@@ -60,7 +60,15 @@ const defaultDrumState: DrumSequencerState = {
   ]
 };
 
-export default function SynthesizerStudio() {
+interface SynthesizerStudioProps {
+  initialTab?: string;
+  onTabChange?: (tabId: string) => void;
+}
+
+export default function SynthesizerStudio({ 
+  initialTab = 'synthesizer',
+  onTabChange 
+}: SynthesizerStudioProps) {
   const [synthState, setSynthState] = useState<SynthState>(defaultSynthState);
   const [recordingState, setRecordingState] = useState<RecordingState>(defaultRecordingState);
   const [drumState, setDrumState] = useState<DrumSequencerState>(defaultDrumState);
@@ -69,6 +77,7 @@ export default function SynthesizerStudio() {
   const [showPresets, setShowPresets] = useState(false);
   const [showCosmicWarning, setShowCosmicWarning] = useState(!isCosmicConfigured);
   const [initializationAttempts, setInitializationAttempts] = useState(0);
+  const [activeTab, setActiveTab] = useState(initialTab);
 
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -137,6 +146,14 @@ export default function SynthesizerStudio() {
       }
     };
   }, []);
+
+  // Handle tab changes
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+    if (onTabChange) {
+      onTabChange(tabId);
+    }
+  };
 
   // Handle user interactions to resume audio context
   const handleUserInteraction = async () => {
@@ -489,38 +506,83 @@ export default function SynthesizerStudio() {
       {/* Audio Visualizer */}
       <AudioVisualizer audioEngine={audioEngineRef.current} />
 
-      {/* Piano Keyboard - moved higher up */}
+      {/* Piano Keyboard - always visible */}
       <PianoKeyboard 
         onKeyPress={handleKeyPress}
         onKeyRelease={handleKeyRelease}
       />
 
-      {/* Drum Sequencer - horizontal layout */}
-      <DrumSequencer 
-        drumState={drumState} 
-        onStateChange={setDrumState} 
-      />
-
-      {/* Main Studio Interface */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Synthesizer Controls */}
-        <div className="space-y-6">
-          <SynthControls 
-            synthState={synthState} 
-            onStateChange={setSynthState} 
-          />
+      {/* Tab content area */}
+      <div className="bg-synth-panel rounded-lg overflow-hidden">
+        {/* Tab navigation */}
+        <div className="flex border-b border-synth-control/30">
+          {[
+            { id: 'synthesizer', label: 'Synthesizer', icon: '🎛️' },
+            { id: 'mixer', label: 'Mixer', icon: '🎚️' },
+            { id: 'drums', label: 'Drums', icon: '🥁' },
+            { id: 'effects', label: 'Effects', icon: '✨' },
+            { id: 'recording', label: 'Recording', icon: '🎙️' }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => handleTabChange(tab.id)}
+              className={`px-6 py-3 text-sm font-medium transition-colors duration-200 border-b-2 ${
+                activeTab === tab.id
+                  ? 'text-synth-accent border-synth-accent bg-synth-control/20'
+                  : 'text-gray-400 border-transparent hover:text-white hover:bg-synth-control/10'
+              }`}
+            >
+              <span className="mr-2">{tab.icon}</span>
+              {tab.label}
+            </button>
+          ))}
         </div>
 
-        {/* Right Column - Effects and Recording */}
-        <div className="space-y-6">
-          <EffectsRack 
-            synthState={synthState} 
-            onStateChange={setSynthState} 
-          />
-          <RecordingControls 
-            recordingState={recordingState}
-            onStateChange={setRecordingState}
-          />
+        {/* Tab content */}
+        <div className="p-6">
+          {activeTab === 'synthesizer' && (
+            <div className="space-y-6">
+              <SynthControls 
+                synthState={synthState} 
+                onStateChange={setSynthState} 
+              />
+            </div>
+          )}
+
+          {activeTab === 'mixer' && (
+            <div className="text-center text-gray-400 py-12">
+              <div className="text-4xl mb-4">🎚️</div>
+              <h3 className="text-xl font-semibold mb-2">Mixer Panel</h3>
+              <p>Advanced mixing controls coming soon...</p>
+            </div>
+          )}
+
+          {activeTab === 'drums' && (
+            <div className="space-y-6">
+              <DrumSequencer 
+                drumState={drumState} 
+                onStateChange={setDrumState} 
+              />
+            </div>
+          )}
+
+          {activeTab === 'effects' && (
+            <div className="space-y-6">
+              <EffectsRack 
+                synthState={synthState} 
+                onStateChange={setSynthState} 
+              />
+            </div>
+          )}
+
+          {activeTab === 'recording' && (
+            <div className="space-y-6">
+              <RecordingControls 
+                recordingState={recordingState}
+                onStateChange={setRecordingState}
+              />
+            </div>
+          )}
         </div>
       </div>
 
