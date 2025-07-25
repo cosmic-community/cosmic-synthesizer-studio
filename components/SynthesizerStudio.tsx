@@ -11,7 +11,9 @@ import DrumSequencer from '@/components/DrumSequencer';
 import RecordingControls from '@/components/RecordingControls';
 import AudioVisualizer from '@/components/AudioVisualizer';
 import PresetManager from '@/components/PresetManager';
-import { Play, Square, Save, Settings, AlertTriangle, RefreshCw } from 'lucide-react';
+import MixerBoard from '@/components/MixerBoard';
+import SequencerGrid from '@/components/SequencerGrid';
+import { Play, Square, Save, Settings, AlertTriangle, RefreshCw, Volume2, Grid, Layers } from 'lucide-react';
 
 const defaultSynthState: SynthState = {
   oscillatorType: 'sawtooth',
@@ -66,7 +68,7 @@ interface SynthesizerStudioProps {
 }
 
 export default function SynthesizerStudio({ 
-  initialTab = 'drums',
+  initialTab = 'synthesizer',
   onTabChange 
 }: SynthesizerStudioProps) {
   const [synthState, setSynthState] = useState<SynthState>(defaultSynthState);
@@ -431,7 +433,7 @@ export default function SynthesizerStudio({
                 COSMIC_BUCKET_SLUG environment variable is required
               </h3>
               <p className="text-sm text-gray-300 mb-3">
-                To save presets, recordings, and drum patterns, you need to configure your Cosmic CMS environment variables.
+                To save presets, recordings, and patterns, you need to configure your Cosmic CMS environment variables.
               </p>
               <div className="flex gap-2">
                 <button
@@ -512,39 +514,17 @@ export default function SynthesizerStudio({
         onKeyRelease={handleKeyRelease}
       />
 
-      {/* Main synthesizer controls grid - always visible */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left column - Synthesizer Controls */}
-        <div className="bg-synth-panel p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            🎛️ Synthesizer
-          </h3>
-          <SynthControls 
-            synthState={synthState} 
-            onStateChange={setSynthState} 
-          />
-        </div>
-
-        {/* Right column - Effects Rack */}
-        <div className="bg-synth-panel p-6 rounded-lg">
-          <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            ✨ Effects
-          </h3>
-          <EffectsRack 
-            synthState={synthState} 
-            onStateChange={setSynthState} 
-          />
-        </div>
-      </div>
-
-      {/* Additional tools tabs */}
+      {/* Tab System for different studio sections */}
       <div className="bg-synth-panel rounded-lg overflow-hidden">
         {/* Tab navigation */}
         <div className="flex border-b border-synth-control/30">
           {[
+            { id: 'synthesizer', label: 'Synthesizer', icon: '🎹' },
+            { id: 'mixer', label: 'Mixer', icon: '🎚️' },
+            { id: 'sequencer', label: 'Sequencer', icon: '📊' },
+            { id: 'effects', label: 'Effects', icon: '✨' },
             { id: 'drums', label: 'Drums', icon: '🥁' },
-            { id: 'recording', label: 'Recording', icon: '🎙️' },
-            { id: 'mixer', label: 'Mixer', icon: '🎚️' }
+            { id: 'recording', label: 'Recording', icon: '🎙️' }
           ].map((tab) => (
             <button
               key={tab.id}
@@ -563,6 +543,86 @@ export default function SynthesizerStudio({
 
         {/* Tab content */}
         <div className="p-6">
+          {activeTab === 'synthesizer' && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Left column - Synthesizer Controls */}
+              <div className="bg-synth-control p-6 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  🎛️ Synthesizer
+                </h3>
+                <SynthControls 
+                  synthState={synthState} 
+                  onStateChange={setSynthState} 
+                />
+              </div>
+
+              {/* Right column - Effects Rack */}
+              <div className="bg-synth-control p-6 rounded-lg">
+                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
+                  ✨ Effects
+                </h3>
+                <EffectsRack 
+                  synthState={synthState} 
+                  onStateChange={setSynthState} 
+                />
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'mixer' && (
+            <MixerBoard 
+              onStateChange={(state) => console.log('Mixer state changed:', state)}
+            />
+          )}
+
+          {activeTab === 'sequencer' && (
+            <SequencerGrid 
+              onStateChange={(state) => console.log('Sequencer state changed:', state)}
+              onStepTrigger={(trackId, step) => {
+                console.log(`Step triggered: ${trackId}`, step);
+                // Here you would trigger the appropriate sound based on trackId and step
+              }}
+            />
+          )}
+
+          {activeTab === 'effects' && (
+            <div className="space-y-6">
+              <div className="text-center mb-8">
+                <div className="text-6xl mb-4">✨</div>
+                <h3 className="text-2xl font-bold text-synth-accent mb-2">Effects Browser</h3>
+                <p className="text-gray-300">Browse and load professional audio effects</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[
+                  { name: 'Vintage Reverb', category: 'Reverb', description: 'Classic plate reverb emulation' },
+                  { name: 'Analog Delay', category: 'Delay', description: 'Warm tape delay simulation' },
+                  { name: 'Tube Distortion', category: 'Distortion', description: 'Vintage tube amplifier saturation' },
+                  { name: 'Lush Chorus', category: 'Modulation', description: 'Rich stereo chorus effect' },
+                  { name: 'Vintage Phaser', category: 'Modulation', description: 'Classic 4-stage phaser' },
+                  { name: 'Multiband EQ', category: 'EQ', description: '4-band parametric equalizer' },
+                  { name: 'Optical Compressor', category: 'Dynamics', description: 'Smooth optical compression' },
+                  { name: 'Frequency Shifter', category: 'Modulation', description: 'Frequency shifting effect' },
+                  { name: 'Grain Delay', category: 'Delay', description: 'Granular delay processor' }
+                ].map((effect, index) => (
+                  <div key={index} className="bg-synth-control p-4 rounded-lg hover:bg-synth-control/80 transition-colors cursor-pointer">
+                    <div className="flex items-center justify-between mb-2">
+                      <h4 className="font-semibold text-white">{effect.name}</h4>
+                      <span className="text-xs px-2 py-1 bg-synth-accent/20 text-synth-accent rounded">
+                        {effect.category}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-400 mb-3">{effect.description}</p>
+                    <div className="flex gap-2">
+                      <button className="synth-button text-xs flex-1">Load</button>
+                      <button className="synth-button text-xs">Preview</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           {activeTab === 'drums' && (
             <div className="space-y-6">
               <DrumSequencer 
@@ -578,14 +638,6 @@ export default function SynthesizerStudio({
                 recordingState={recordingState}
                 onStateChange={setRecordingState}
               />
-            </div>
-          )}
-
-          {activeTab === 'mixer' && (
-            <div className="text-center text-gray-400 py-12">
-              <div className="text-4xl mb-4">🎚️</div>
-              <h3 className="text-xl font-semibold mb-2">Mixer Panel</h3>
-              <p>Advanced mixing controls coming soon...</p>
             </div>
           )}
         </div>
