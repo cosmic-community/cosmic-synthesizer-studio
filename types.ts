@@ -71,13 +71,13 @@ export interface DrumSequencerState {
   sounds?: DrumSoundConfig[];
 }
 
-// Enhanced DrumSound interface with advanced parameters
+// Enhanced DrumSound interface with advanced parameters - volume is now required to match lib/drumSounds.ts
 export interface DrumSoundConfig {
   name: string;
   type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'crash' | 'ride' | 'clap' | 'perc' | 'cymbal' | 'tom';
   frequency: number;
   decay: number;
-  volume?: number;
+  volume: number; // Changed from optional to required to match lib/drumSounds.ts
   pitch?: number;
   resonance?: number;
   distortion?: number;
