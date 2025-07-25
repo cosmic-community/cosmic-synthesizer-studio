@@ -8,10 +8,13 @@ export class AudioEngine {
   private analyser: AnalyserNode | null = null;
   private reverb: ConvolverNode | null = null;
   private delay: DelayNode | null = null;
+  private delayFeedback: GainNode | null = null;
   private filter: BiquadFilterNode | null = null;
   private distortion: WaveShaperNode | null = null;
   private chorus: DelayNode | null = null;
-  private activeNotes: Map<string, { oscillators: OscillatorNode[]; envelope: GainNode; filter?: BiquadFilterNode }> = new Map();
+  private chorusLFO: OscillatorNode | null = null;
+  private chorusGain: GainNode | null = null;
+  private activeNotes: Map<string, { oscillators: OscillatorNode[]; envelope: GainNode; filter?: BiquadFilterNode; effectsChain?: AudioNode[] }> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private isInitialized: boolean = false;
@@ -146,29 +149,29 @@ export class AudioEngine {
       this.reverb.buffer = impulse;
 
       console.log('Creating delay...');
-      // Create delay
+      // Create delay with feedback
       this.delay = this.audioContext.createDelay(1.0);
-      const delayFeedback = this.audioContext.createGain();
-      delayFeedback.gain.value = 0.3;
-      this.delay.connect(delayFeedback);
-      delayFeedback.connect(this.delay);
+      this.delayFeedback = this.audioContext.createGain();
+      this.delayFeedback.gain.value = 0.3;
+      this.delay.connect(this.delayFeedback);
+      this.delayFeedback.connect(this.delay);
 
       console.log('Creating distortion...');
       // Create distortion
       this.distortion = this.audioContext.createWaveShaper();
-      this.distortion.curve = this.makeDistortionCurve(400);
+      this.updateDistortionCurve('soft', 30);
       this.distortion.oversample = '4x';
 
       console.log('Creating chorus...');
       // Create chorus (using delay and LFO)
       this.chorus = this.audioContext.createDelay(0.02);
-      const chorusLFO = this.audioContext.createOscillator();
-      const chorusGain = this.audioContext.createGain();
-      chorusLFO.connect(chorusGain);
-      chorusGain.connect(this.chorus.delayTime);
-      chorusLFO.frequency.value = 1;
-      chorusGain.gain.value = 0.005;
-      chorusLFO.start();
+      this.chorusLFO = this.audioContext.createOscillator();
+      this.chorusGain = this.audioContext.createGain();
+      this.chorusLFO.connect(this.chorusGain);
+      this.chorusGain.connect(this.chorus.delayTime);
+      this.chorusLFO.frequency.value = 1;
+      this.chorusGain.gain.value = 0.005;
+      this.chorusLFO.start();
 
       console.log('Effects initialization completed');
     } catch (error) {
@@ -177,17 +180,45 @@ export class AudioEngine {
     }
   }
 
-  private makeDistortionCurve(amount: number): Float32Array {
+  private updateDistortionCurve(type: string, amount: number): void {
+    if (!this.distortion) return;
+
     const samples = 44100;
     const curve = new Float32Array(samples);
-    const deg = Math.PI / 180;
 
     for (let i = 0; i < samples; i++) {
       const x = (i * 2) / samples - 1;
-      curve[i] = ((3 + amount) * x * 20 * deg) / (Math.PI + amount * Math.abs(x));
+      
+      switch (type) {
+        case 'soft':
+          curve[i] = Math.tanh(x * (amount / 20)) * 0.7;
+          break;
+        case 'hard':
+          curve[i] = Math.max(-0.8, Math.min(0.8, x * (amount / 10)));
+          break;
+        case 'tube':
+          const abs_x = Math.abs(x * (amount / 30));
+          if (abs_x < 0.5) {
+            curve[i] = x * 2;
+          } else {
+            curve[i] = Math.sign(x) * (0.75 + (abs_x - 0.5) * 0.5);
+          }
+          curve[i] *= 0.6;
+          break;
+        case 'fuzz':
+          curve[i] = Math.sign(x) * Math.pow(Math.abs(x * (amount / 30)), 0.3) * 0.8;
+          break;
+        case 'bitcrush':
+          const bits = Math.max(1, 8 - Math.floor(amount / 12));
+          const step = Math.pow(2, bits - 1);
+          curve[i] = Math.round(x * step) / step;
+          break;
+        default:
+          curve[i] = Math.tanh(x * (amount / 20)) * 0.7;
+      }
     }
 
-    return curve;
+    this.distortion.curve = curve;
   }
 
   public async resume(): Promise<void> {
@@ -231,9 +262,10 @@ export class AudioEngine {
       const envelope = this.audioContext.createGain();
       envelope.gain.value = 0;
 
-      // Connect audio chain
+      // Connect audio chain with effects
       oscillator.connect(envelope);
-      this.connectEffects(envelope, synthState);
+      const effectsChain = this.createEffectsChain(synthState);
+      this.connectToEffectsChain(envelope, effectsChain);
 
       // Apply ADSR envelope
       const now = this.audioContext.currentTime;
@@ -254,9 +286,90 @@ export class AudioEngine {
       oscillator.start();
 
       // Store active note
-      this.activeNotes.set(noteKey, { oscillators: [oscillator], envelope });
+      this.activeNotes.set(noteKey, { 
+        oscillators: [oscillator], 
+        envelope,
+        effectsChain
+      });
     } catch (error) {
       console.error('Error playing note:', error);
+    }
+  }
+
+  private createEffectsChain(synthState: SynthState): AudioNode[] {
+    const chain: AudioNode[] = [];
+    
+    if (!this.audioContext || !this.masterGain) return chain;
+
+    try {
+      // Distortion first
+      if (synthState.effects.distortion?.active && this.distortion) {
+        // Update distortion parameters
+        this.updateDistortionCurve(
+          synthState.effects.distortion.type || 'soft',
+          synthState.effects.distortion.amount || 30
+        );
+        chain.push(this.distortion);
+      }
+
+      // Chorus
+      if (synthState.effects.chorus?.active && this.chorus && this.chorusLFO && this.chorusGain) {
+        // Update chorus parameters
+        this.chorusLFO.frequency.value = synthState.effects.chorus.rate || 1.0;
+        this.chorusGain.gain.value = (synthState.effects.chorus.depth || 0.5) * 0.01;
+        chain.push(this.chorus);
+      }
+
+      // Delay
+      if (synthState.effects.delay?.active && this.delay && this.delayFeedback) {
+        // Update delay parameters
+        this.delay.delayTime.value = synthState.effects.delay.time || 0.25;
+        this.delayFeedback.gain.value = synthState.effects.delay.feedback || 0.3;
+        chain.push(this.delay);
+      }
+
+      // Reverb last
+      if (synthState.effects.reverb?.active && this.reverb) {
+        chain.push(this.reverb);
+      }
+
+    } catch (error) {
+      console.error('Error creating effects chain:', error);
+    }
+
+    return chain;
+  }
+
+  private connectToEffectsChain(source: AudioNode, chain: AudioNode[]): void {
+    if (!this.masterGain) return;
+
+    try {
+      let currentNode = source;
+      
+      // Always connect dry signal to master
+      source.connect(this.masterGain);
+
+      // Connect wet signal through effects chain
+      if (chain.length > 0) {
+        const wetGain = this.audioContext!.createGain();
+        wetGain.gain.value = 0.3; // Mix level for wet signal
+        
+        currentNode.connect(wetGain);
+        currentNode = wetGain;
+
+        // Chain effects together
+        for (const effect of chain) {
+          currentNode.connect(effect);
+          currentNode = effect;
+        }
+
+        // Connect final effect to master
+        currentNode.connect(this.masterGain);
+      }
+    } catch (error) {
+      console.error('Error connecting effects chain:', error);
+      // Fallback to direct connection
+      source.connect(this.masterGain);
     }
   }
 
@@ -490,54 +603,6 @@ export class AudioEngine {
     }
   }
 
-  private connectEffects(source: AudioNode, synthState: SynthState): void {
-    if (!this.masterGain) return;
-
-    let currentNode = source;
-
-    try {
-      // Apply effects based on state
-      if (synthState.effects.distortion.active && this.distortion) {
-        currentNode.connect(this.distortion);
-        currentNode = this.distortion;
-      }
-
-      if (synthState.effects.chorus.active && this.chorus) {
-        const chorusGain = this.audioContext!.createGain();
-        chorusGain.gain.value = 0.5;
-        currentNode.connect(chorusGain);
-        chorusGain.connect(this.chorus);
-        this.chorus.connect(this.masterGain);
-      }
-
-      if (synthState.effects.delay.active && this.delay) {
-        const delayGain = this.audioContext!.createGain();
-        delayGain.gain.value = 0.3;
-        currentNode.connect(delayGain);
-        delayGain.connect(this.delay);
-        this.delay.connect(this.masterGain);
-        
-        // Set delay parameters
-        this.delay.delayTime.value = synthState.effects.delay.time;
-      }
-
-      if (synthState.effects.reverb.active && this.reverb) {
-        const reverbGain = this.audioContext!.createGain();
-        reverbGain.gain.value = synthState.effects.reverb.amount;
-        currentNode.connect(reverbGain);
-        reverbGain.connect(this.reverb);
-        this.reverb.connect(this.masterGain);
-      }
-
-      // Always connect dry signal
-      currentNode.connect(this.masterGain);
-    } catch (error) {
-      console.error('Error connecting effects:', error);
-      // Fallback to direct connection
-      source.connect(this.masterGain);
-    }
-  }
-
   public playDrumSound(sound: DrumSoundConfig): void {
     if (!this.isInitialized || !this.audioContext || !this.masterGain) return;
 
@@ -730,6 +795,15 @@ export class AudioEngine {
     });
     this.activeNotes.clear();
     
+    // Stop and clean up LFOs
+    if (this.chorusLFO) {
+      try {
+        this.chorusLFO.stop();
+      } catch (error) {
+        // Ignore errors when stopping LFOs
+      }
+    }
+    
     // Close audio context
     if (this.audioContext && this.audioContext.state !== 'closed') {
       this.audioContext.close().catch(console.error);
@@ -742,9 +816,12 @@ export class AudioEngine {
     this.analyser = null;
     this.reverb = null;
     this.delay = null;
+    this.delayFeedback = null;
     this.filter = null;
     this.distortion = null;
     this.chorus = null;
+    this.chorusLFO = null;
+    this.chorusGain = null;
     this.mediaRecorder = null;
     
     this.isInitialized = false;
