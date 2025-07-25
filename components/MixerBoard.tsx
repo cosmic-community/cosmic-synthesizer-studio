@@ -5,105 +5,58 @@ import { Volume2, Mic, Headphones, Settings, RotateCcw, Save } from 'lucide-reac
 import ChannelStrip from './ChannelStrip';
 
 export interface MixerChannel {
-  id: number;
+  id: string;
   name: string;
-  type: 'synth' | 'drum' | 'audio' | 'aux';
   volume: number;
-  pan: number;
   muted: boolean;
-  solo: boolean;
-  eq: {
+  soloed: boolean;
+  pan: number;
+  type?: 'synth' | 'drum' | 'audio' | 'aux';
+  eq?: {
     high: number;
     mid: number;
     low: number;
   };
-  sends: {
+  sends?: {
     reverb: number;
     delay: number;
     chorus: number;
   };
-  insert: string | null;
-  input: string;
-  output: string;
-  recording: boolean;
-  monitoring: boolean;
+  insert?: string | null;
+  input?: string;
+  output?: string;
+  recording?: boolean;
+  monitoring?: boolean;
 }
 
-export interface MixerState {
+export interface MixerBoardProps {
   channels: MixerChannel[];
-  masterVolume: number;
-  masterPan: number;
-  cueVolume: number;
-  talkbackLevel: number;
-  metering: {
-    [channelId: number]: {
-      peak: number;
-      rms: number;
-      clip: boolean;
-    };
-  };
-  masterMetering: {
-    left: number;
-    right: number;
-    peak: number;
-    clip: boolean;
-  };
-}
-
-const defaultChannel = (id: number, name: string, type: MixerChannel['type']): MixerChannel => ({
-  id,
-  name,
-  type,
-  volume: 0.75,
-  pan: 0,
-  muted: false,
-  solo: false,
-  eq: { high: 0, mid: 0, low: 0 },
-  sends: { reverb: 0, delay: 0, chorus: 0 },
-  insert: null,
-  input: type === 'synth' ? 'Synth 1' : type === 'drum' ? 'Drum Machine' : 'Line In',
-  output: 'Master',
-  recording: false,
-  monitoring: false
-});
-
-const defaultMixerState: MixerState = {
-  channels: [
-    defaultChannel(1, 'Synth Lead', 'synth'),
-    defaultChannel(2, 'Synth Pad', 'synth'),
-    defaultChannel(3, 'Kick', 'drum'),
-    defaultChannel(4, 'Snare', 'drum'),
-    defaultChannel(5, 'Hi-Hat', 'drum'),
-    defaultChannel(6, 'Audio 1', 'audio'),
-    defaultChannel(7, 'Audio 2', 'audio'),
-    defaultChannel(8, 'Reverb', 'aux')
-  ],
-  masterVolume: 0.8,
-  masterPan: 0,
-  cueVolume: 0.7,
-  talkbackLevel: 0.5,
-  metering: {},
-  masterMetering: { left: 0, right: 0, peak: 0, clip: false }
-};
-
-interface MixerBoardProps {
-  onStateChange?: (state: MixerState) => void;
+  onChannelChange: (channelId: string, property: string, value: any) => void;
+  onStateChange?: (state: any) => void;
   className?: string;
 }
 
-export default function MixerBoard({ onStateChange, className }: MixerBoardProps) {
-  const [mixerState, setMixerState] = useState<MixerState>(defaultMixerState);
-  const [selectedChannel, setSelectedChannel] = useState<number | null>(null);
+export default function MixerBoard({ 
+  channels, 
+  onChannelChange, 
+  onStateChange, 
+  className 
+}: MixerBoardProps) {
+  const [selectedChannel, setSelectedChannel] = useState<string | null>(null);
   const [showRoutingMatrix, setShowRoutingMatrix] = useState(false);
   const [viewMode, setViewMode] = useState<'channels' | 'sends' | 'eq'>('channels');
+  const [masterVolume, setMasterVolume] = useState(0.8);
+  const [masterPan, setMasterPan] = useState(0);
+  const [cueVolume, setCueVolume] = useState(0.7);
+  const [metering, setMetering] = useState<{[channelId: string]: { peak: number; rms: number; clip: boolean }}>({});
+  const [masterMetering, setMasterMetering] = useState({ left: 0, right: 0, peak: 0, clip: false });
 
   // Simulate metering data
   useEffect(() => {
     const interval = setInterval(() => {
-      setMixerState(prev => ({
-        ...prev,
-        metering: Object.fromEntries(
-          prev.channels.map(ch => [
+      setMetering(
+        Object.fromEntries(
+          channels.map(ch => [
             ch.id,
             {
               peak: Math.random() * (ch.muted ? 0 : ch.volume),
@@ -111,61 +64,32 @@ export default function MixerBoard({ onStateChange, className }: MixerBoardProps
               clip: Math.random() > 0.95 && !ch.muted
             }
           ])
-        ),
-        masterMetering: {
-          left: Math.random() * prev.masterVolume,
-          right: Math.random() * prev.masterVolume,
-          peak: Math.random() * prev.masterVolume,
-          clip: Math.random() > 0.98
-        }
-      }));
+        )
+      );
+      setMasterMetering({
+        left: Math.random() * masterVolume,
+        right: Math.random() * masterVolume,
+        peak: Math.random() * masterVolume,
+        clip: Math.random() > 0.98
+      });
     }, 50);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [channels, masterVolume]);
 
-  const updateMixerState = (updates: Partial<MixerState>) => {
-    const newState = { ...mixerState, ...updates };
-    setMixerState(newState);
-    if (onStateChange) {
-      onStateChange(newState);
-    }
+  const handleChannelChange = (channelId: string, property: string, value: any) => {
+    onChannelChange(channelId, property, value);
   };
 
-  const updateChannel = (channelId: number, updates: Partial<MixerChannel>) => {
-    const newChannels = mixerState.channels.map(ch =>
-      ch.id === channelId ? { ...ch, ...updates } : ch
-    );
-    updateMixerState({ channels: newChannels });
-  };
-
-  const resetMixer = () => {
-    setMixerState(defaultMixerState);
-    if (onStateChange) {
-      onStateChange(defaultMixerState);
-    }
-  };
-
-  const soloChannel = (channelId: number) => {
-    const newChannels = mixerState.channels.map(ch => ({
-      ...ch,
-      solo: ch.id === channelId ? !ch.solo : false
-    }));
-    updateMixerState({ channels: newChannels });
-  };
-
-  const addChannel = () => {
-    const newId = Math.max(...mixerState.channels.map(ch => ch.id)) + 1;
-    const newChannel = defaultChannel(newId, `Channel ${newId}`, 'audio');
-    updateMixerState({ 
-      channels: [...mixerState.channels, newChannel] 
-    });
-  };
-
-  const removeChannel = (channelId: number) => {
-    if (mixerState.channels.length > 1) {
-      updateMixerState({
-        channels: mixerState.channels.filter(ch => ch.id !== channelId)
+  const soloChannel = (channelId: string) => {
+    const channel = channels.find(ch => ch.id === channelId);
+    if (channel) {
+      onChannelChange(channelId, 'soloed', !channel.soloed);
+      // Unsolo other channels
+      channels.forEach(ch => {
+        if (ch.id !== channelId && ch.soloed) {
+          onChannelChange(ch.id, 'soloed', false);
+        }
       });
     }
   };
@@ -203,13 +127,9 @@ export default function MixerBoard({ onStateChange, className }: MixerBoardProps
               Routing
             </button>
             
-            <button onClick={resetMixer} className="synth-button">
+            <button className="synth-button">
               <RotateCcw className="w-4 h-4" />
               Reset
-            </button>
-            
-            <button onClick={addChannel} className="synth-button">
-              + Channel
             </button>
           </div>
         </div>
@@ -223,12 +143,12 @@ export default function MixerBoard({ onStateChange, className }: MixerBoardProps
               min="0"
               max="1"
               step="0.01"
-              value={mixerState.masterVolume}
-              onChange={(e) => updateMixerState({ masterVolume: Number(e.target.value) })}
+              value={masterVolume}
+              onChange={(e) => setMasterVolume(Number(e.target.value))}
               className="w-20 synth-slider"
             />
             <span className="text-sm text-synth-accent w-12">
-              {Math.round(mixerState.masterVolume * 100)}%
+              {Math.round(masterVolume * 100)}%
             </span>
           </div>
 
@@ -239,8 +159,8 @@ export default function MixerBoard({ onStateChange, className }: MixerBoardProps
               min="0"
               max="1"
               step="0.01"
-              value={mixerState.cueVolume}
-              onChange={(e) => updateMixerState({ cueVolume: Number(e.target.value) })}
+              value={cueVolume}
+              onChange={(e) => setCueVolume(Number(e.target.value))}
               className="w-16 synth-slider"
             />
           </div>
@@ -251,18 +171,18 @@ export default function MixerBoard({ onStateChange, className }: MixerBoardProps
             <div className="w-16 h-3 bg-synth-control rounded overflow-hidden">
               <div
                 className={`h-full transition-all duration-75 ${
-                  mixerState.masterMetering.clip ? 'bg-red-500' : 'bg-gradient-to-r from-green-500 via-yellow-500 to-red-500'
+                  masterMetering.clip ? 'bg-red-500' : 'bg-gradient-to-r from-green-500 via-yellow-500 to-red-500'
                 }`}
-                style={{ width: `${mixerState.masterMetering.left * 100}%` }}
+                style={{ width: `${masterMetering.left * 100}%` }}
               />
             </div>
             <div className="text-xs text-gray-400">R</div>
             <div className="w-16 h-3 bg-synth-control rounded overflow-hidden">
               <div
                 className={`h-full transition-all duration-75 ${
-                  mixerState.masterMetering.clip ? 'bg-red-500' : 'bg-gradient-to-r from-green-500 via-yellow-500 to-red-500'
+                  masterMetering.clip ? 'bg-red-500' : 'bg-gradient-to-r from-green-500 via-yellow-500 to-red-500'
                 }`}
-                style={{ width: `${mixerState.masterMetering.right * 100}%` }}
+                style={{ width: `${masterMetering.right * 100}%` }}
               />
             </div>
           </div>
@@ -272,18 +192,77 @@ export default function MixerBoard({ onStateChange, className }: MixerBoardProps
       {/* Channel Strips */}
       <div className="p-4">
         <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-4">
-          {mixerState.channels.map((channel) => (
-            <ChannelStrip
-              key={channel.id}
-              channel={channel}
-              metering={mixerState.metering[channel.id]}
-              viewMode={viewMode}
-              isSelected={selectedChannel === channel.id}
-              onUpdate={(updates) => updateChannel(channel.id, updates)}
-              onSelect={() => setSelectedChannel(channel.id)}
-              onSolo={() => soloChannel(channel.id)}
-              onRemove={() => removeChannel(channel.id)}
-            />
+          {channels.map((channel) => (
+            <div key={channel.id} className="bg-synth-control p-3 rounded-lg">
+              <div className="flex items-center justify-between mb-3">
+                <h4 className="text-sm font-medium text-white truncate">{channel.name}</h4>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleChannelChange(channel.id, 'muted', !channel.muted)}
+                    className={`w-6 h-6 text-xs rounded ${
+                      channel.muted ? 'bg-red-600 text-white' : 'bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    M
+                  </button>
+                  <button
+                    onClick={() => soloChannel(channel.id)}
+                    className={`w-6 h-6 text-xs rounded ${
+                      channel.soloed ? 'bg-yellow-600 text-white' : 'bg-gray-600 text-gray-300'
+                    }`}
+                  >
+                    S
+                  </button>
+                </div>
+              </div>
+
+              {/* Volume Control */}
+              <div className="mb-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-gray-400">Volume</span>
+                  <span className="text-xs text-synth-accent">{Math.round(channel.volume * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={channel.volume}
+                  onChange={(e) => handleChannelChange(channel.id, 'volume', Number(e.target.value))}
+                  className="w-full synth-slider"
+                />
+              </div>
+
+              {/* Pan Control */}
+              <div className="mb-3">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-xs text-gray-400">Pan</span>
+                  <span className="text-xs text-synth-accent">
+                    {channel.pan > 0 ? `R${Math.round(channel.pan * 100)}` : 
+                     channel.pan < 0 ? `L${Math.round(Math.abs(channel.pan) * 100)}` : 'C'}
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="-1"
+                  max="1"
+                  step="0.01"
+                  value={channel.pan}
+                  onChange={(e) => handleChannelChange(channel.id, 'pan', Number(e.target.value))}
+                  className="w-full synth-slider"
+                />
+              </div>
+
+              {/* Level Meter */}
+              <div className="h-2 bg-synth-bg rounded overflow-hidden">
+                <div
+                  className={`h-full transition-all duration-75 ${
+                    metering[channel.id]?.clip ? 'bg-red-500' : 'bg-gradient-to-r from-green-500 via-yellow-500 to-red-500'
+                  }`}
+                  style={{ width: `${(metering[channel.id]?.peak || 0) * 100}%` }}
+                />
+              </div>
+            </div>
           ))}
         </div>
       </div>
@@ -305,35 +284,8 @@ export default function MixerBoard({ onStateChange, className }: MixerBoardProps
             </div>
             
             <div className="p-6">
-              <div className="grid grid-cols-8 gap-2 text-sm">
-                <div className="font-semibold text-gray-300">Input</div>
-                {mixerState.channels.slice(0, 7).map(ch => (
-                  <div key={ch.id} className="font-semibold text-gray-300 text-center">
-                    Ch {ch.id}
-                  </div>
-                ))}
-                
-                {mixerState.channels.map(sourceChannel => (
-                  <>
-                    <div key={`source-${sourceChannel.id}`} className="font-medium text-gray-400">
-                      {sourceChannel.name}
-                    </div>
-                    {mixerState.channels.slice(0, 7).map(targetChannel => (
-                      <div key={`route-${sourceChannel.id}-${targetChannel.id}`} className="text-center">
-                        <input
-                          type="checkbox"
-                          checked={sourceChannel.output === `Channel ${targetChannel.id}`}
-                          onChange={(e) => {
-                            if (e.target.checked) {
-                              updateChannel(sourceChannel.id, { output: `Channel ${targetChannel.id}` });
-                            }
-                          }}
-                          className="rounded"
-                        />
-                      </div>
-                    ))}
-                  </>
-                ))}
+              <div className="text-center text-gray-400">
+                <p>Routing matrix configuration will be available in a future update.</p>
               </div>
             </div>
           </div>

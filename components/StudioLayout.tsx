@@ -28,6 +28,7 @@ import SequencerGrid from '@/components/SequencerGrid';
 import EffectsRack from '@/components/EffectsRack';
 import DrumSequencer from '@/components/DrumSequencer';
 import RecordingControls from '@/components/RecordingControls';
+import { DrumSequencerState, RecordingState } from '@/types';
 
 interface StudioLayoutProps {
   children: React.ReactNode;
@@ -86,7 +87,7 @@ export default function StudioLayout({
               { id: '7', name: 'FX', volume: 0.3, muted: false, soloed: false, pan: 0 },
               { id: '8', name: 'Master', volume: 0.8, muted: false, soloed: false, pan: 0 }
             ]}
-            onChannelChange={(channelId, property, value) => {
+            onChannelChange={(channelId: string, property: string, value: any) => {
               console.log(`Channel ${channelId} ${property} changed to ${value}`);
             }}
           />
@@ -111,11 +112,11 @@ export default function StudioLayout({
             currentStep={0}
             isPlaying={false}
             bpm={128}
-            onPatternChange={(patternId, stepIndex, active) => {
+            onPatternChange={(patternId: string, stepIndex: number, active: boolean) => {
               console.log(`Pattern ${patternId} step ${stepIndex} set to ${active}`);
             }}
             onPlayToggle={() => console.log('Play/pause toggle')}
-            onBpmChange={(bpm) => console.log('BPM changed to', bpm)}
+            onBpmChange={(bpm: number) => console.log('BPM changed to', bpm)}
           />
         </div>
       ),
@@ -161,7 +162,7 @@ export default function StudioLayout({
       content: (
         <div className="h-full p-6">
           <DrumSequencer
-            state={{
+            drumState={{
               isPlaying: false,
               currentStep: 0,
               bpm: 128,
@@ -177,8 +178,8 @@ export default function StudioLayout({
                 { name: 'Tom 1', type: 'kick', frequency: 100, decay: 0.3, volume: 0.7 },
                 { name: 'Tom 2', type: 'kick', frequency: 80, decay: 0.35, volume: 0.7 }
               ]
-            }}
-            onStateChange={(state) => console.log('Drum state changed', state)}
+            } as DrumSequencerState}
+            onStateChange={(state: DrumSequencerState) => console.log('Drum state changed', state)}
           />
         </div>
       ),
@@ -191,14 +192,14 @@ export default function StudioLayout({
       content: (
         <div className="h-full p-6">
           <RecordingControls
-            state={{
+            recordingState={{
               isRecording: false,
               isPlaying: false,
               duration: 0,
               audioBuffer: null,
               waveformData: []
-            }}
-            onStateChange={(state) => console.log('Recording state changed', state)}
+            } as RecordingState}
+            onStateChange={(state: RecordingState) => console.log('Recording state changed', state)}
           />
         </div>
       ),
