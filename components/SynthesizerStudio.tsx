@@ -13,7 +13,7 @@ import AudioVisualizer from '@/components/AudioVisualizer';
 import PresetManager from '@/components/PresetManager';
 import MixerBoard from '@/components/MixerBoard';
 import SequencerGrid from '@/components/SequencerGrid';
-import { Play, Square, Save, Settings, AlertTriangle, RefreshCw, Volume2, Grid, Layers } from 'lucide-react';
+import { Play, Square, Save, Settings, AlertTriangle, RefreshCw, Volume2, Grid, Layers, Mic, Zap, Clock, Headphones } from 'lucide-react';
 
 const defaultSynthState: SynthState = {
   oscillatorType: 'sawtooth',
@@ -422,10 +422,10 @@ export default function SynthesizerStudio({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="h-screen flex flex-col bg-synth-bg">
       {/* Cosmic Configuration Warning */}
       {showCosmicWarning && (
-        <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4">
+        <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 m-4">
           <div className="flex items-start gap-3">
             <AlertTriangle className="w-5 h-5 text-yellow-500 mt-0.5 flex-shrink-0" />
             <div className="flex-1">
@@ -448,179 +448,187 @@ export default function SynthesizerStudio({
         </div>
       )}
 
-      {/* Header Controls with Compact Audio Visualizer */}
-      <div className="bg-synth-panel p-4 rounded-lg">
-        <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-          <div className="flex items-center gap-4">
-            <button
-              onClick={toggleDrumSequencer}
-              className={`synth-button flex items-center gap-2 ${drumState.isPlaying ? 'active' : ''}`}
-              disabled={!audioEngineRef.current?.initialized}
-            >
-              {drumState.isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-              {drumState.isPlaying ? 'Stop' : 'Play'} Drums
-            </button>
-            
-            <button
-              onClick={toggleRecording}
-              className={`synth-button flex items-center gap-2 ${recordingState.isRecording ? 'active glow-warning' : ''}`}
-              disabled={!audioEngineRef.current?.initialized}
-            >
-              <div className={`w-3 h-3 rounded-full ${recordingState.isRecording ? 'bg-red-500 recording-indicator' : 'bg-gray-500'}`} />
-              {recordingState.isRecording ? `Recording ${recordingState.duration.toFixed(1)}s` : 'Record'}
-            </button>
-          </div>
-
-          {/* Compact Audio Visualizer positioned in the center gap */}
-          <div className="flex-1 flex justify-center max-w-xs">
-            <AudioVisualizer audioEngine={audioEngineRef.current} compact={true} />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => setShowPresets(!showPresets)}
-              className="synth-button flex items-center gap-2"
-              disabled={!isCosmicConfigured}
-              title={!isCosmicConfigured ? 'Requires Cosmic CMS configuration' : 'Manage presets'}
-            >
-              <Save className="w-4 h-4" />
-              Presets
-            </button>
-            
-            <button className="synth-button flex items-center gap-2">
-              <Settings className="w-4 h-4" />
-              Settings
-            </button>
-          </div>
-        </div>
-
-        {/* Audio Engine Status */}
-        {audioEngineRef.current && (
-          <div className="pt-3 border-t border-synth-control/20">
-            <div className="flex items-center justify-between text-xs text-gray-400">
-              <span>
-                Audio Engine: {audioEngineRef.current.initialized ? 
-                  <span className="text-green-400">Ready</span> : 
-                  <span className="text-yellow-400">Suspended (click to activate)</span>
-                }
-              </span>
-              <span>Context: {audioEngineRef.current.contextState}</span>
+      {/* Main Tab Navigation - Full Screen */}
+      <div className="flex-1 flex flex-col bg-synth-panel m-4 rounded-lg overflow-hidden">
+        {/* Tab Header Bar */}
+        <div className="bg-synth-control/50 border-b border-white/10">
+          <div className="flex items-center justify-between p-4">
+            {/* Tab Navigation */}
+            <div className="flex">
+              {[
+                { id: 'synthesizer', label: 'Synthesizer', icon: <Zap className="w-4 h-4" /> },
+                { id: 'mixer', label: 'Mixer', icon: <Volume2 className="w-4 h-4" /> },
+                { id: 'sequencer', label: 'Sequencer', icon: <Grid className="w-4 h-4" /> },
+                { id: 'effects', label: 'Effects', icon: <Layers className="w-4 h-4" /> },
+                { id: 'drums', label: 'Drums', icon: <Headphones className="w-4 h-4" /> },
+                { id: 'recording', label: 'Recording', icon: <Mic className="w-4 h-4" /> }
+              ].map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => handleTabChange(tab.id)}
+                  className={`px-6 py-3 text-sm font-medium transition-all duration-200 border-b-2 flex items-center gap-2 ${
+                    activeTab === tab.id
+                      ? 'text-synth-accent border-synth-accent bg-synth-accent/10'
+                      : 'text-gray-400 border-transparent hover:text-white hover:bg-synth-control/20'
+                  }`}
+                >
+                  {tab.icon}
+                  {tab.label}
+                </button>
+              ))}
             </div>
-          </div>
-        )}
-      </div>
 
-      {/* Tab System for different studio sections */}
-      <div className="bg-synth-panel rounded-lg overflow-hidden">
-        {/* Tab navigation */}
-        <div className="flex border-b border-synth-control/30">
-          {[
-            { id: 'synthesizer', label: 'Synthesizer', icon: '🎹' },
-            { id: 'mixer', label: 'Mixer', icon: '🎚️' },
-            { id: 'sequencer', label: 'Sequencer', icon: '📊' },
-            { id: 'effects', label: 'Effects', icon: '✨' },
-            { id: 'drums', label: 'Drums', icon: '🥁' },
-            { id: 'recording', label: 'Recording', icon: '🎙️' }
-          ].map((tab) => (
-            <button
-              key={tab.id}
-              onClick={() => handleTabChange(tab.id)}
-              className={`px-6 py-3 text-sm font-medium transition-colors duration-200 border-b-2 ${
-                activeTab === tab.id
-                  ? 'text-synth-accent border-synth-accent bg-synth-control/20'
-                  : 'text-gray-400 border-transparent hover:text-white hover:bg-synth-control/10'
-              }`}
-            >
-              <span className="mr-2">{tab.icon}</span>
-              {tab.label}
-            </button>
-          ))}
-        </div>
-
-        {/* Tab content */}
-        <div className="p-6">
-          {activeTab === 'synthesizer' && (
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Left column - Synthesizer Controls */}
-              <div className="bg-synth-control p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  🎛️ Synthesizer
-                </h3>
-                <SynthControls 
-                  synthState={synthState} 
-                  onStateChange={setSynthState} 
-                />
+            {/* Global Controls */}
+            <div className="flex items-center gap-4">
+              {/* Master Transport Controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={toggleDrumSequencer}
+                  className={`synth-button flex items-center gap-2 ${drumState.isPlaying ? 'active' : ''}`}
+                  disabled={!audioEngineRef.current?.initialized}
+                >
+                  {drumState.isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
+                  {drumState.isPlaying ? 'Stop' : 'Play'}
+                </button>
+                
+                <button
+                  onClick={toggleRecording}
+                  className={`synth-button flex items-center gap-2 ${recordingState.isRecording ? 'active glow-warning' : ''}`}
+                  disabled={!audioEngineRef.current?.initialized}
+                >
+                  <div className={`w-3 h-3 rounded-full ${recordingState.isRecording ? 'bg-red-500 recording-indicator' : 'bg-gray-500'}`} />
+                  {recordingState.isRecording ? `Recording ${recordingState.duration.toFixed(1)}s` : 'Record'}
+                </button>
               </div>
 
-              {/* Right column - Effects Rack */}
-              <div className="bg-synth-control p-6 rounded-lg">
-                <h3 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-                  ✨ Effects
-                </h3>
-                <EffectsRack 
-                  synthState={synthState} 
-                  onStateChange={setSynthState} 
-                />
+              {/* Audio Visualizer */}
+              <div className="flex justify-center max-w-xs">
+                <AudioVisualizer audioEngine={audioEngineRef.current} compact={true} />
+              </div>
+
+              {/* Utility Controls */}
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setShowPresets(!showPresets)}
+                  className="synth-button flex items-center gap-2"
+                  disabled={!isCosmicConfigured}
+                  title={!isCosmicConfigured ? 'Requires Cosmic CMS configuration' : 'Manage presets'}
+                >
+                  <Save className="w-4 h-4" />
+                  Presets
+                </button>
+                
+                <button className="synth-button flex items-center gap-2">
+                  <Settings className="w-4 h-4" />
+                  Settings
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Audio Status Bar */}
+          {audioEngineRef.current && (
+            <div className="px-4 pb-3 border-t border-synth-control/20">
+              <div className="flex items-center justify-between text-xs text-gray-400">
+                <span>
+                  Audio Engine: {audioEngineRef.current.initialized ? 
+                    <span className="text-green-400">Ready</span> : 
+                    <span className="text-yellow-400">Suspended (click to activate)</span>
+                  }
+                </span>
+                <span>Context: {audioEngineRef.current.contextState}</span>
+                <span>BPM: {drumState.bpm}</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Tab Content Area - Full Screen */}
+        <div className="flex-1 overflow-hidden">
+          {activeTab === 'synthesizer' && (
+            <div className="h-full p-6 overflow-y-auto">
+              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-full">
+                {/* Synthesizer Controls */}
+                <div className="bg-synth-control p-6 rounded-lg">
+                  <SynthControls 
+                    synthState={synthState} 
+                    onStateChange={setSynthState} 
+                  />
+                </div>
+
+                {/* Effects Rack */}
+                <div className="bg-synth-control p-6 rounded-lg">
+                  <EffectsRack 
+                    synthState={synthState} 
+                    onStateChange={setSynthState} 
+                  />
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'mixer' && (
-            <MixerBoard 
-              onStateChange={(state) => console.log('Mixer state changed:', state)}
-            />
+            <div className="h-full p-6 overflow-y-auto">
+              <MixerBoard 
+                onStateChange={(state) => console.log('Mixer state changed:', state)}
+              />
+            </div>
           )}
 
           {activeTab === 'sequencer' && (
-            <SequencerGrid 
-              onStateChange={(state) => console.log('Sequencer state changed:', state)}
-              onStepTrigger={(trackId, step) => {
-                console.log(`Step triggered: ${trackId}`, step);
-                // Here you would trigger the appropriate sound based on trackId and step
-              }}
-            />
+            <div className="h-full p-6 overflow-y-auto">
+              <SequencerGrid 
+                onStateChange={(state) => console.log('Sequencer state changed:', state)}
+                onStepTrigger={(trackId, step) => {
+                  console.log(`Step triggered: ${trackId}`, step);
+                  // Here you would trigger the appropriate sound based on trackId and step
+                }}
+              />
+            </div>
           )}
 
           {activeTab === 'effects' && (
-            <div className="space-y-6">
-              <div className="text-center mb-8">
-                <div className="text-6xl mb-4">✨</div>
-                <h3 className="text-2xl font-bold text-synth-accent mb-2">Effects Browser</h3>
-                <p className="text-gray-300">Browse and load professional audio effects</p>
-              </div>
+            <div className="h-full p-6 overflow-y-auto">
+              <div className="space-y-6">
+                <div className="text-center mb-8">
+                  <div className="text-6xl mb-4">✨</div>
+                  <h3 className="text-2xl font-bold text-synth-accent mb-2">Effects Browser</h3>
+                  <p className="text-gray-300">Browse and load professional audio effects</p>
+                </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {[
-                  { name: 'Vintage Reverb', category: 'Reverb', description: 'Classic plate reverb emulation' },
-                  { name: 'Analog Delay', category: 'Delay', description: 'Warm tape delay simulation' },
-                  { name: 'Tube Distortion', category: 'Distortion', description: 'Vintage tube amplifier saturation' },
-                  { name: 'Lush Chorus', category: 'Modulation', description: 'Rich stereo chorus effect' },
-                  { name: 'Vintage Phaser', category: 'Modulation', description: 'Classic 4-stage phaser' },
-                  { name: 'Multiband EQ', category: 'EQ', description: '4-band parametric equalizer' },
-                  { name: 'Optical Compressor', category: 'Dynamics', description: 'Smooth optical compression' },
-                  { name: 'Frequency Shifter', category: 'Modulation', description: 'Frequency shifting effect' },
-                  { name: 'Grain Delay', category: 'Delay', description: 'Granular delay processor' }
-                ].map((effect, index) => (
-                  <div key={index} className="bg-synth-control p-4 rounded-lg hover:bg-synth-control/80 transition-colors cursor-pointer">
-                    <div className="flex items-center justify-between mb-2">
-                      <h4 className="font-semibold text-white">{effect.name}</h4>
-                      <span className="text-xs px-2 py-1 bg-synth-accent/20 text-synth-accent rounded">
-                        {effect.category}
-                      </span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {[
+                    { name: 'Vintage Reverb', category: 'Reverb', description: 'Classic plate reverb emulation' },
+                    { name: 'Analog Delay', category: 'Delay', description: 'Warm tape delay simulation' },
+                    { name: 'Tube Distortion', category: 'Distortion', description: 'Vintage tube amplifier saturation' },
+                    { name: 'Lush Chorus', category: 'Modulation', description: 'Rich stereo chorus effect' },
+                    { name: 'Vintage Phaser', category: 'Modulation', description: 'Classic 4-stage phaser' },
+                    { name: 'Multiband EQ', category: 'EQ', description: '4-band parametric equalizer' },
+                    { name: 'Optical Compressor', category: 'Dynamics', description: 'Smooth optical compression' },
+                    { name: 'Frequency Shifter', category: 'Modulation', description: 'Frequency shifting effect' },
+                    { name: 'Grain Delay', category: 'Delay', description: 'Granular delay processor' }
+                  ].map((effect, index) => (
+                    <div key={index} className="bg-synth-control p-4 rounded-lg hover:bg-synth-control/80 transition-colors cursor-pointer">
+                      <div className="flex items-center justify-between mb-2">
+                        <h4 className="font-semibold text-white">{effect.name}</h4>
+                        <span className="text-xs px-2 py-1 bg-synth-accent/20 text-synth-accent rounded">
+                          {effect.category}
+                        </span>
+                      </div>
+                      <p className="text-sm text-gray-400 mb-3">{effect.description}</p>
+                      <div className="flex gap-2">
+                        <button className="synth-button text-xs flex-1">Load</button>
+                        <button className="synth-button text-xs">Preview</button>
+                      </div>
                     </div>
-                    <p className="text-sm text-gray-400 mb-3">{effect.description}</p>
-                    <div className="flex gap-2">
-                      <button className="synth-button text-xs flex-1">Load</button>
-                      <button className="synth-button text-xs">Preview</button>
-                    </div>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
             </div>
           )}
 
           {activeTab === 'drums' && (
-            <div className="space-y-6">
+            <div className="h-full p-6 overflow-y-auto">
               <DrumSequencer 
                 drumState={drumState} 
                 onStateChange={setDrumState} 
@@ -629,7 +637,7 @@ export default function SynthesizerStudio({
           )}
 
           {activeTab === 'recording' && (
-            <div className="space-y-6">
+            <div className="h-full p-6 overflow-y-auto">
               <RecordingControls 
                 recordingState={recordingState}
                 onStateChange={setRecordingState}
@@ -639,11 +647,13 @@ export default function SynthesizerStudio({
         </div>
       </div>
 
-      {/* Piano Keyboard - REMAINS AT BOTTOM */}
-      <PianoKeyboard 
-        onKeyPress={handleKeyPress}
-        onKeyRelease={handleKeyRelease}
-      />
+      {/* Piano Keyboard - Always Visible at Bottom */}
+      <div className="bg-synth-panel m-4 mt-0 rounded-lg overflow-hidden">
+        <PianoKeyboard 
+          onKeyPress={handleKeyPress}
+          onKeyRelease={handleKeyRelease}
+        />
+      </div>
 
       {/* Preset Manager Modal */}
       {showPresets && isCosmicConfigured && (
