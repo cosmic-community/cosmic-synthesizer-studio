@@ -356,6 +356,7 @@ export class ModernChorus {
       delay.connect(this.feedback);
     });
     
+    // Add null check for array access
     const firstDelay = this.delays[0];
     if (firstDelay) {
       this.feedback.connect(firstDelay);
