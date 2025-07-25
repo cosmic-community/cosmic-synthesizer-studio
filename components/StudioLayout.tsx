@@ -14,13 +14,20 @@ import {
   Clock,
   Activity,
   Wifi,
-  WifiOff
+  WifiOff,
+  Grid,
+  Headphones
 } from 'lucide-react';
 import { clsx } from 'clsx';
 import AnimatedBackground from '@/components/AnimatedBackground';
 import StatusBar from '@/components/StatusBar';
 import Toolbar from '@/components/Toolbar';
 import TabSystem, { Tab, useTabs } from '@/components/TabSystem';
+import MixerBoard from '@/components/MixerBoard';
+import SequencerGrid from '@/components/SequencerGrid';
+import EffectsRack from '@/components/EffectsRack';
+import DrumSequencer from '@/components/DrumSequencer';
+import RecordingControls from '@/components/RecordingControls';
 
 interface StudioLayoutProps {
   children: React.ReactNode;
@@ -66,21 +73,199 @@ export default function StudioLayout({
       id: 'mixer',
       title: 'Mixer',
       icon: <Volume2 className="w-4 h-4" />,
-      content: <div className="p-8 text-center text-gray-400">Mixer coming soon...</div>,
+      content: (
+        <div className="h-full p-6">
+          <MixerBoard
+            channels={[
+              { id: '1', name: 'Synth 1', volume: 0.8, muted: false, soloed: false, pan: 0 },
+              { id: '2', name: 'Synth 2', volume: 0.6, muted: false, soloed: false, pan: -0.3 },
+              { id: '3', name: 'Drums', volume: 0.9, muted: false, soloed: false, pan: 0.2 },
+              { id: '4', name: 'Bass', volume: 0.7, muted: false, soloed: false, pan: 0 },
+              { id: '5', name: 'Lead', volume: 0.5, muted: false, soloed: false, pan: 0.4 },
+              { id: '6', name: 'Pad', volume: 0.4, muted: false, soloed: false, pan: -0.2 },
+              { id: '7', name: 'FX', volume: 0.3, muted: false, soloed: false, pan: 0 },
+              { id: '8', name: 'Master', volume: 0.8, muted: false, soloed: false, pan: 0 }
+            ]}
+            onChannelChange={(channelId, property, value) => {
+              console.log(`Channel ${channelId} ${property} changed to ${value}`);
+            }}
+          />
+        </div>
+      ),
       closable: false
     },
     {
       id: 'sequencer',
       title: 'Sequencer',
       icon: <Clock className="w-4 h-4" />,
-      content: <div className="p-8 text-center text-gray-400">Advanced sequencer coming soon...</div>,
+      content: (
+        <div className="h-full p-6">
+          <SequencerGrid
+            patterns={Array(8).fill(null).map((_, i) => ({
+              id: `pattern-${i}`,
+              name: `Pattern ${i + 1}`,
+              steps: Array(16).fill(false),
+              note: 60 + i * 2,
+              active: i === 0
+            }))}
+            currentStep={0}
+            isPlaying={false}
+            bpm={128}
+            onPatternChange={(patternId, stepIndex, active) => {
+              console.log(`Pattern ${patternId} step ${stepIndex} set to ${active}`);
+            }}
+            onPlayToggle={() => console.log('Play/pause toggle')}
+            onBpmChange={(bpm) => console.log('BPM changed to', bpm)}
+          />
+        </div>
+      ),
       closable: false
     },
     {
       id: 'effects',
       title: 'Effects',
       icon: <Layers className="w-4 h-4" />,
-      content: <div className="p-8 text-center text-gray-400">Effect browser coming soon...</div>,
+      content: (
+        <div className="h-full p-6">
+          <EffectsRack 
+            synthState={{
+              oscillatorType: 'sawtooth',
+              filterCutoff: 1000,
+              filterResonance: 1,
+              attack: 0.1,
+              decay: 0.3,
+              sustain: 0.7,
+              release: 0.5,
+              volume: 0.5,
+              effects: {
+                reverb: { active: false, amount: 0.3, roomSize: 0.5 },
+                delay: { active: false, time: 0.25, feedback: 0.3 },
+                distortion: { active: false, amount: 50, type: 'soft' },
+                chorus: { active: false, rate: 1, depth: 0.5 },
+                phaser: { active: false, rate: 0.5, depth: 0.7 },
+                flanger: { active: false, rate: 0.3, feedback: 0.6 },
+                compressor: { active: false, threshold: -20, ratio: 4 },
+                eq: { active: false, low: 0, mid: 0, high: 0 }
+              }
+            }}
+            onStateChange={(state) => console.log('Effects state changed', state)}
+          />
+        </div>
+      ),
+      closable: false
+    },
+    {
+      id: 'drums',
+      title: 'Drums',
+      icon: <Grid className="w-4 h-4" />,
+      content: (
+        <div className="h-full p-6">
+          <DrumSequencer
+            state={{
+              isPlaying: false,
+              currentStep: 0,
+              bpm: 128,
+              pattern: Array(8).fill(null).map(() => Array(16).fill(false)),
+              selectedSound: 0,
+              sounds: [
+                { name: 'Kick', type: 'kick', frequency: 60, decay: 0.5, volume: 0.8 },
+                { name: 'Snare', type: 'snare', frequency: 200, decay: 0.2, volume: 0.7 },
+                { name: 'Hi-Hat', type: 'hihat', frequency: 8000, decay: 0.1, volume: 0.6 },
+                { name: 'Open Hat', type: 'openhat', frequency: 9000, decay: 0.3, volume: 0.5 },
+                { name: 'Crash', type: 'crash', frequency: 5000, decay: 0.8, volume: 0.6 },
+                { name: 'Ride', type: 'ride', frequency: 3000, decay: 0.6, volume: 0.5 },
+                { name: 'Tom 1', type: 'kick', frequency: 100, decay: 0.3, volume: 0.7 },
+                { name: 'Tom 2', type: 'kick', frequency: 80, decay: 0.35, volume: 0.7 }
+              ]
+            }}
+            onStateChange={(state) => console.log('Drum state changed', state)}
+          />
+        </div>
+      ),
+      closable: false
+    },
+    {
+      id: 'recording',
+      title: 'Recording',
+      icon: <Mic className="w-4 h-4" />,
+      content: (
+        <div className="h-full p-6">
+          <RecordingControls
+            state={{
+              isRecording: false,
+              isPlaying: false,
+              duration: 0,
+              audioBuffer: null,
+              waveformData: []
+            }}
+            onStateChange={(state) => console.log('Recording state changed', state)}
+          />
+        </div>
+      ),
+      closable: false
+    },
+    {
+      id: 'monitoring',
+      title: 'Monitoring',
+      icon: <Headphones className="w-4 h-4" />,
+      content: (
+        <div className="h-full p-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 h-full">
+            <div className="bg-synth-control p-6 rounded-lg">
+              <h3 className="text-lg font-bold text-synth-accent mb-4">Audio Levels</h3>
+              <div className="space-y-4">
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-300">Master Output</span>
+                    <span className="text-sm text-synth-accent">{Math.round(masterLevel * 100)}%</span>
+                  </div>
+                  <div className="h-3 bg-synth-bg rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all duration-150"
+                      style={{ width: `${masterLevel * 100}%` }}
+                    />
+                  </div>
+                </div>
+                <div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-300">Input Level</span>
+                    <span className="text-sm text-synth-accent">{Math.round(inputLevel * 100)}%</span>
+                  </div>
+                  <div className="h-3 bg-synth-bg rounded-full overflow-hidden">
+                    <div 
+                      className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all duration-150"
+                      style={{ width: `${inputLevel * 100}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="bg-synth-control p-6 rounded-lg">
+              <h3 className="text-lg font-bold text-synth-accent mb-4">System Performance</h3>
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{cpuUsage}%</div>
+                    <div className="text-sm text-gray-400">CPU Usage</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{memoryUsage}%</div>
+                    <div className="text-sm text-gray-400">Memory</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">{audioLatency}ms</div>
+                    <div className="text-sm text-gray-400">Latency</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-2xl font-bold text-white">44.1</div>
+                    <div className="text-sm text-gray-400">kHz</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      ),
       closable: false
     }
   ]);
