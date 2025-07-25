@@ -63,14 +63,10 @@ const defaultDrumState: DrumSequencerState = {
 };
 
 interface SynthesizerStudioProps {
-  initialTab?: string;
-  onTabChange?: (tabId: string) => void;
+  className?: string;
 }
 
-export default function SynthesizerStudio({ 
-  initialTab = 'synthesizer',
-  onTabChange 
-}: SynthesizerStudioProps) {
+export default function SynthesizerStudio({ className }: SynthesizerStudioProps) {
   const [synthState, setSynthState] = useState<SynthState>(defaultSynthState);
   const [recordingState, setRecordingState] = useState<RecordingState>(defaultRecordingState);
   const [drumState, setDrumState] = useState<DrumSequencerState>(defaultDrumState);
@@ -79,7 +75,6 @@ export default function SynthesizerStudio({
   const [showPresets, setShowPresets] = useState(false);
   const [showCosmicWarning, setShowCosmicWarning] = useState(!isCosmicConfigured);
   const [initializationAttempts, setInitializationAttempts] = useState(0);
-  const [activeTab, setActiveTab] = useState(initialTab);
 
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -148,14 +143,6 @@ export default function SynthesizerStudio({
       }
     };
   }, []);
-
-  // Handle tab changes
-  const handleTabChange = (tabId: string) => {
-    setActiveTab(tabId);
-    if (onTabChange) {
-      onTabChange(tabId);
-    }
-  };
 
   // Handle user interactions to resume audio context
   const handleUserInteraction = async () => {
@@ -422,7 +409,7 @@ export default function SynthesizerStudio({
   }
 
   return (
-    <div className="h-screen flex flex-col bg-synth-bg">
+    <div className={`h-screen flex flex-col bg-synth-bg ${className || ''}`}>
       {/* Cosmic Configuration Warning */}
       {showCosmicWarning && (
         <div className="bg-yellow-900/20 border border-yellow-600 rounded-lg p-4 m-4">
@@ -448,34 +435,17 @@ export default function SynthesizerStudio({
         </div>
       )}
 
-      {/* Main Tab Navigation - Full Screen */}
+      {/* Main Synthesizer Interface */}
       <div className="flex-1 flex flex-col bg-synth-panel m-4 rounded-lg overflow-hidden">
-        {/* Tab Header Bar */}
+        {/* Header Bar with Global Controls */}
         <div className="bg-synth-control/50 border-b border-white/10">
           <div className="flex items-center justify-between p-4">
-            {/* Tab Navigation */}
-            <div className="flex">
-              {[
-                { id: 'synthesizer', label: 'Synthesizer', icon: <Zap className="w-4 h-4" /> },
-                { id: 'mixer', label: 'Mixer', icon: <Volume2 className="w-4 h-4" /> },
-                { id: 'sequencer', label: 'Sequencer', icon: <Grid className="w-4 h-4" /> },
-                { id: 'effects', label: 'Effects', icon: <Layers className="w-4 h-4" /> },
-                { id: 'drums', label: 'Drums', icon: <Headphones className="w-4 h-4" /> },
-                { id: 'recording', label: 'Recording', icon: <Mic className="w-4 h-4" /> }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => handleTabChange(tab.id)}
-                  className={`px-6 py-3 text-sm font-medium transition-all duration-200 border-b-2 flex items-center gap-2 ${
-                    activeTab === tab.id
-                      ? 'text-synth-accent border-synth-accent bg-synth-accent/10'
-                      : 'text-gray-400 border-transparent hover:text-white hover:bg-synth-control/20'
-                  }`}
-                >
-                  {tab.icon}
-                  {tab.label}
-                </button>
-              ))}
+            {/* Synthesizer Title */}
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2">
+                <Zap className="w-6 h-6 text-synth-accent" />
+                <h1 className="text-xl font-bold text-white">Synthesizer Studio</h1>
+              </div>
             </div>
 
             {/* Global Controls */}
@@ -543,107 +513,27 @@ export default function SynthesizerStudio({
           )}
         </div>
 
-        {/* Tab Content Area - Full Screen */}
-        <div className="flex-1 overflow-hidden">
-          {activeTab === 'synthesizer' && (
-            <div className="h-full p-6 overflow-y-auto">
-              <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-full">
-                {/* Synthesizer Controls */}
-                <div className="bg-synth-control p-6 rounded-lg">
-                  <SynthControls 
-                    synthState={synthState} 
-                    onStateChange={setSynthState} 
-                  />
-                </div>
-
-                {/* Effects Rack */}
-                <div className="bg-synth-control p-6 rounded-lg">
-                  <EffectsRack 
-                    synthState={synthState} 
-                    onStateChange={setSynthState} 
-                  />
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'mixer' && (
-            <div className="h-full p-6 overflow-y-auto">
-              <MixerBoard 
-                onStateChange={(state) => console.log('Mixer state changed:', state)}
+        {/* Main Synthesizer Content */}
+        <div className="flex-1 p-6 overflow-y-auto">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 h-full">
+            {/* Synthesizer Controls */}
+            <div className="bg-synth-control p-6 rounded-lg">
+              <h2 className="text-lg font-bold text-synth-accent mb-4">Oscillator & Filter</h2>
+              <SynthControls 
+                synthState={synthState} 
+                onStateChange={setSynthState} 
               />
             </div>
-          )}
 
-          {activeTab === 'sequencer' && (
-            <div className="h-full p-6 overflow-y-auto">
-              <SequencerGrid 
-                onStateChange={(state) => console.log('Sequencer state changed:', state)}
-                onStepTrigger={(trackId, step) => {
-                  console.log(`Step triggered: ${trackId}`, step);
-                  // Here you would trigger the appropriate sound based on trackId and step
-                }}
+            {/* Effects Rack */}
+            <div className="bg-synth-control p-6 rounded-lg">
+              <h2 className="text-lg font-bold text-synth-accent mb-4">Effects Rack</h2>
+              <EffectsRack 
+                synthState={synthState} 
+                onStateChange={setSynthState} 
               />
             </div>
-          )}
-
-          {activeTab === 'effects' && (
-            <div className="h-full p-6 overflow-y-auto">
-              <div className="space-y-6">
-                <div className="text-center mb-8">
-                  <div className="text-6xl mb-4">✨</div>
-                  <h3 className="text-2xl font-bold text-synth-accent mb-2">Effects Browser</h3>
-                  <p className="text-gray-300">Browse and load professional audio effects</p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {[
-                    { name: 'Vintage Reverb', category: 'Reverb', description: 'Classic plate reverb emulation' },
-                    { name: 'Analog Delay', category: 'Delay', description: 'Warm tape delay simulation' },
-                    { name: 'Tube Distortion', category: 'Distortion', description: 'Vintage tube amplifier saturation' },
-                    { name: 'Lush Chorus', category: 'Modulation', description: 'Rich stereo chorus effect' },
-                    { name: 'Vintage Phaser', category: 'Modulation', description: 'Classic 4-stage phaser' },
-                    { name: 'Multiband EQ', category: 'EQ', description: '4-band parametric equalizer' },
-                    { name: 'Optical Compressor', category: 'Dynamics', description: 'Smooth optical compression' },
-                    { name: 'Frequency Shifter', category: 'Modulation', description: 'Frequency shifting effect' },
-                    { name: 'Grain Delay', category: 'Delay', description: 'Granular delay processor' }
-                  ].map((effect, index) => (
-                    <div key={index} className="bg-synth-control p-4 rounded-lg hover:bg-synth-control/80 transition-colors cursor-pointer">
-                      <div className="flex items-center justify-between mb-2">
-                        <h4 className="font-semibold text-white">{effect.name}</h4>
-                        <span className="text-xs px-2 py-1 bg-synth-accent/20 text-synth-accent rounded">
-                          {effect.category}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-400 mb-3">{effect.description}</p>
-                      <div className="flex gap-2">
-                        <button className="synth-button text-xs flex-1">Load</button>
-                        <button className="synth-button text-xs">Preview</button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-          )}
-
-          {activeTab === 'drums' && (
-            <div className="h-full p-6 overflow-y-auto">
-              <DrumSequencer 
-                drumState={drumState} 
-                onStateChange={setDrumState} 
-              />
-            </div>
-          )}
-
-          {activeTab === 'recording' && (
-            <div className="h-full p-6 overflow-y-auto">
-              <RecordingControls 
-                recordingState={recordingState}
-                onStateChange={setRecordingState}
-              />
-            </div>
-          )}
+          </div>
         </div>
       </div>
 
