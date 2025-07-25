@@ -1,19 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { 
-  X, 
-  Plus, 
-  ChevronLeft, 
-  ChevronRight,
-  Settings,
-  Zap,
-  Volume2,
-  Layers,
-  Mic,
-  Play,
-  Clock
-} from 'lucide-react';
+import { useState, useCallback, useRef, useEffect } from 'react';
+import { X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
 import { clsx } from 'clsx';
 
 export interface Tab {
@@ -22,8 +10,7 @@ export interface Tab {
   icon?: React.ReactNode;
   content: React.ReactNode;
   closable?: boolean;
-  modified?: boolean;
-  disabled?: boolean;
+  dirty?: boolean;
 }
 
 interface TabSystemProps {
@@ -32,407 +19,48 @@ interface TabSystemProps {
   onTabChange: (tabId: string) => void;
   onTabClose?: (tabId: string) => void;
   onTabAdd?: () => void;
-  onTabReorder?: (tabs: Tab[]) => void;
-  maxTabs?: number;
+  onTabReorder?: (fromIndex: number, toIndex: number) => void;
   showAddButton?: boolean;
+  maxTabs?: number;
   scrollable?: boolean;
   className?: string;
 }
 
-interface TabHeaderProps {
-  tab: Tab;
-  isActive: boolean;
-  onClick: () => void;
-  onClose?: () => void;
-  onMiddleClick?: () => void;
-  className?: string;
-}
-
-function TabHeader({ 
-  tab, 
-  isActive, 
-  onClick, 
-  onClose, 
-  onMiddleClick,
-  className 
-}: TabHeaderProps) {
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (e.button === 1 && onMiddleClick) { // Middle click
-      e.preventDefault();
-      onMiddleClick();
-    }
-  };
-
-  const handleCloseClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (onClose) {
-      onClose();
-    }
-  };
-
-  return (
-    <div
-      className={clsx(
-        'relative flex items-center gap-2 px-4 py-3 rounded-t-lg',
-        'transition-all duration-200 cursor-pointer select-none',
-        'border-b-2 min-w-0 max-w-48',
-        isActive
-          ? 'bg-synth-panel border-synth-accent text-white shadow-lg'
-          : 'bg-synth-control border-transparent hover:border-synth-accent/50 hover:bg-synth-panel/50 text-gray-300',
-        tab.disabled && 'opacity-50 cursor-not-allowed',
-        className
-      )}
-      onClick={!tab.disabled ? onClick : undefined}
-      onMouseDown={handleMouseDown}
-      role="tab"
-      aria-selected={isActive}
-      tabIndex={tab.disabled ? -1 : 0}
-    >
-      {/* Tab icon */}
-      {tab.icon && (
-        <span className={clsx(
-          'w-4 h-4 flex-shrink-0',
-          isActive ? 'text-synth-accent' : 'text-gray-400'
-        )}>
-          {tab.icon}
-        </span>
-      )}
-
-      {/* Tab title */}
-      <span className={clsx(
-        'font-medium text-sm truncate flex-1',
-        isActive ? 'text-white' : 'text-gray-300'
-      )}>
-        {tab.title}
-        {tab.modified && (
-          <span className="text-synth-accent ml-1">•</span>
-        )}
-      </span>
-
-      {/* Close button */}
-      {tab.closable !== false && onClose && (
-        <button
-          onClick={handleCloseClick}
-          className={clsx(
-            'w-4 h-4 flex-shrink-0 rounded hover:bg-synth-control/50',
-            'transition-colors duration-150',
-            isActive ? 'text-gray-300 hover:text-white' : 'text-gray-500 hover:text-gray-300'
-          )}
-          title="Close tab"
-        >
-          <X className="w-3 h-3" />
-        </button>
-      )}
-
-      {/* Active indicator */}
-      {isActive && (
-        <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-synth-accent rounded-full" />
-      )}
-    </div>
-  );
-}
-
-export default function TabSystem({
-  tabs,
-  activeTabId,
-  onTabChange,
-  onTabClose,
-  onTabAdd,
-  onTabReorder,
-  maxTabs = 10,
-  showAddButton = true,
-  scrollable = true,
-  className
-}: TabSystemProps) {
-  const [scrollPosition, setScrollPosition] = useState(0);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(false);
-  const [draggedTab, setDraggedTab] = useState<string | null>(null);
-  const [dragOverTab, setDragOverTab] = useState<string | null>(null);
-  
-  const tabsRef = useRef<HTMLDivElement>(null);
-  const activeTab = tabs.find(tab => tab.id === activeTabId);
-
-  // Update scroll indicators
-  useEffect(() => {
-    const updateScrollIndicators = () => {
-      if (!tabsRef.current || !scrollable) return;
-      
-      const { scrollLeft, scrollWidth, clientWidth } = tabsRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 1);
-    };
-
-    updateScrollIndicators();
-    
-    if (tabsRef.current) {
-      tabsRef.current.addEventListener('scroll', updateScrollIndicators);
-      window.addEventListener('resize', updateScrollIndicators);
-    }
-
-    return () => {
-      if (tabsRef.current) {
-        tabsRef.current.removeEventListener('scroll', updateScrollIndicators);
-      }
-      window.removeEventListener('resize', updateScrollIndicators);
-    };
-  }, [tabs, scrollable]);
-
-  // Scroll to active tab when it changes
-  useEffect(() => {
-    if (!tabsRef.current || !scrollable) return;
-
-    const activeTabElement = tabsRef.current.querySelector(`[data-tab-id="${activeTabId}"]`);
-    if (activeTabElement) {
-      activeTabElement.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'nearest',
-        inline: 'center'
-      });
-    }
-  }, [activeTabId, scrollable]);
-
-  const scroll = (direction: 'left' | 'right') => {
-    if (!tabsRef.current) return;
-    
-    const scrollAmount = 200;
-    tabsRef.current.scrollBy({
-      left: direction === 'left' ? -scrollAmount : scrollAmount,
-      behavior: 'smooth'
-    });
-  };
-
-  const handleTabClose = (tabId: string) => {
-    if (onTabClose) {
-      onTabClose(tabId);
-    }
-  };
-
-  const handleTabAdd = () => {
-    if (onTabAdd && tabs.length < maxTabs) {
-      onTabAdd();
-    }
-  };
-
-  // Drag and drop handlers
-  const handleDragStart = (e: React.DragEvent, tabId: string) => {
-    setDraggedTab(tabId);
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', tabId);
-
-    // Add some visual feedback
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '0.5';
-    }
-  };
-
-  const handleDragEnd = (e: React.DragEvent) => {
-    setDraggedTab(null);
-    setDragOverTab(null);
-    
-    if (e.currentTarget instanceof HTMLElement) {
-      e.currentTarget.style.opacity = '1';
-    }
-  };
-
-  const handleDragOver = (e: React.DragEvent, tabId: string) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    setDragOverTab(tabId);
-  };
-
-  const handleDrop = (e: React.DragEvent, targetTabId: string) => {
-    e.preventDefault();
-    
-    const draggedTabId = e.dataTransfer.getData('text/plain');
-    if (!draggedTabId || draggedTabId === targetTabId || !onTabReorder) return;
-
-    const draggedIndex = tabs.findIndex(tab => tab.id === draggedTabId);
-    const targetIndex = tabs.findIndex(tab => tab.id === targetTabId);
-    
-    if (draggedIndex === -1 || targetIndex === -1) return;
-
-    const newTabs = [...tabs];
-    const [draggedTab] = newTabs.splice(draggedIndex, 1);
-    newTabs.splice(targetIndex, 0, draggedTab);
-    
-    onTabReorder(newTabs);
-    setDragOverTab(null);
-  };
-
-  return (
-    <div className={clsx(
-      'flex flex-col bg-synth-bg h-full',
-      className
-    )}>
-      {/* Tab headers */}
-      <div className="flex items-center bg-synth-bg border-b border-white/10 flex-shrink-0">
-        {/* Left scroll button */}
-        {scrollable && canScrollLeft && (
-          <button
-            onClick={() => scroll('left')}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition-colors bg-synth-control hover:bg-synth-panel"
-            title="Scroll left"
-          >
-            <ChevronLeft className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Tabs container */}
-        <div 
-          ref={tabsRef}
-          className={clsx(
-            'flex flex-1 overflow-x-auto scrollbar-none',
-            scrollable ? 'scroll-smooth' : 'overflow-x-hidden'
-          )}
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          <div className="flex">
-            {tabs.map((tab) => (
-              <div
-                key={tab.id}
-                data-tab-id={tab.id}
-                draggable={onTabReorder ? true : false}
-                onDragStart={(e) => handleDragStart(e, tab.id)}
-                onDragEnd={handleDragEnd}
-                onDragOver={(e) => handleDragOver(e, tab.id)}
-                onDrop={(e) => handleDrop(e, tab.id)}
-                className={clsx(
-                  'relative',
-                  dragOverTab === tab.id && 'before:absolute before:left-0 before:top-0 before:bottom-0 before:w-0.5 before:bg-synth-accent',
-                  draggedTab === tab.id && 'opacity-50'
-                )}
-              >
-                <TabHeader
-                  tab={tab}
-                  isActive={tab.id === activeTabId}
-                  onClick={() => onTabChange(tab.id)}
-                  onClose={onTabClose ? () => handleTabClose(tab.id) : undefined}
-                  onMiddleClick={onTabClose ? () => handleTabClose(tab.id) : undefined}
-                />
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right scroll button */}
-        {scrollable && canScrollRight && (
-          <button
-            onClick={() => scroll('right')}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-white transition-colors bg-synth-control hover:bg-synth-panel"
-            title="Scroll right"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        )}
-
-        {/* Add tab button */}
-        {showAddButton && onTabAdd && tabs.length < maxTabs && (
-          <button
-            onClick={handleTabAdd}
-            className="flex-shrink-0 p-2 text-gray-400 hover:text-synth-accent transition-colors bg-synth-control hover:bg-synth-panel"
-            title="Add new tab"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
-      {/* Tab content */}
-      <div className="flex-1 relative overflow-hidden">
-        {activeTab ? (
-          <div 
-            key={activeTab.id}
-            className="absolute inset-0 p-6 overflow-y-auto animate-fade-in-scale"
-          >
-            {activeTab.content}
-          </div>
-        ) : (
-          <div className="flex items-center justify-center h-full text-gray-400">
-            <p>No active tab</p>
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// Predefined tab configurations for common studio sections
-export const studioTabs = {
-  synthesizer: {
-    id: 'synthesizer',
-    title: 'Synthesizer',
-    icon: <Zap className="w-4 h-4" />,
-    closable: false
-  },
-  mixer: {
-    id: 'mixer',
-    title: 'Mixer',
-    icon: <Volume2 className="w-4 h-4" />,
-    closable: false
-  },
-  sequencer: {
-    id: 'sequencer',
-    title: 'Sequencer',
-    icon: <Clock className="w-4 h-4" />,
-    closable: false
-  },
-  effects: {
-    id: 'effects',
-    title: 'Effects',
-    icon: <Layers className="w-4 h-4" />,
-    closable: false
-  },
-  recording: {
-    id: 'recording',
-    title: 'Recording',
-    icon: <Mic className="w-4 h-4" />,
-    closable: false
-  },
-  settings: {
-    id: 'settings',
-    title: 'Settings',
-    icon: <Settings className="w-4 h-4" />,
-    closable: true
-  }
-};
-
-// Hook for managing tabs state
-export function useTabs(initialTabs: Tab[] = []) {
+export function useTabs(initialTabs: Tab[]) {
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [activeTabId, setActiveTabId] = useState<string>(
     initialTabs.length > 0 ? initialTabs[0].id : ''
   );
 
-  const addTab = (tab: Tab) => {
+  const addTab = useCallback((tab: Tab) => {
     setTabs(prev => [...prev, tab]);
     setActiveTabId(tab.id);
-  };
+  }, []);
 
-  const removeTab = (tabId: string) => {
+  const removeTab = useCallback((tabId: string) => {
     setTabs(prev => {
-      const newTabs = prev.filter(tab => tab.id !== tabId);
-      
-      // If we're closing the active tab, switch to another tab
-      if (tabId === activeTabId && newTabs.length > 0) {
-        const currentIndex = prev.findIndex(tab => tab.id === tabId);
-        const nextIndex = Math.min(currentIndex, newTabs.length - 1);
-        setActiveTabId(newTabs[nextIndex].id);
+      const filtered = prev.filter(tab => tab.id !== tabId);
+      if (activeTabId === tabId && filtered.length > 0) {
+        setActiveTabId(filtered[0].id);
       }
-      
-      return newTabs;
+      return filtered;
     });
-  };
+  }, [activeTabId]);
 
-  const updateTab = (tabId: string, updates: Partial<Tab>) => {
+  const updateTab = useCallback((tabId: string, updates: Partial<Tab>) => {
     setTabs(prev => prev.map(tab => 
       tab.id === tabId ? { ...tab, ...updates } : tab
     ));
-  };
+  }, []);
 
-  const reorderTabs = (newTabs: Tab[]) => {
-    setTabs(newTabs);
-  };
+  const reorderTabs = useCallback((fromIndex: number, toIndex: number) => {
+    setTabs(prev => {
+      const newTabs = [...prev];
+      const [removed] = newTabs.splice(fromIndex, 1);
+      newTabs.splice(toIndex, 0, removed);
+      return newTabs;
+    });
+  }, []);
 
   return {
     tabs,
@@ -443,4 +71,205 @@ export function useTabs(initialTabs: Tab[] = []) {
     updateTab,
     reorderTabs
   };
+}
+
+export default function TabSystem({
+  tabs,
+  activeTabId,
+  onTabChange,
+  onTabClose,
+  onTabAdd,
+  onTabReorder,
+  showAddButton = false,
+  maxTabs = 10,
+  scrollable = false,
+  className
+}: TabSystemProps) {
+  const [canScrollLeft, setCanScrollLeft] = useState(false);
+  const [canScrollRight, setCanScrollRight] = useState(false);
+  const tabsContainerRef = useRef<HTMLDivElement>(null);
+  const activeTab = tabs.find(tab => tab.id === activeTabId);
+
+  // Check scroll state
+  const checkScrollState = useCallback(() => {
+    const container = tabsContainerRef.current;
+    if (!container || !scrollable) return;
+
+    setCanScrollLeft(container.scrollLeft > 0);
+    setCanScrollRight(
+      container.scrollLeft < container.scrollWidth - container.clientWidth
+    );
+  }, [scrollable]);
+
+  useEffect(() => {
+    checkScrollState();
+    
+    const container = tabsContainerRef.current;
+    if (container && scrollable) {
+      container.addEventListener('scroll', checkScrollState);
+      window.addEventListener('resize', checkScrollState);
+      
+      return () => {
+        container.removeEventListener('scroll', checkScrollState);
+        window.removeEventListener('resize', checkScrollState);
+      };
+    }
+  }, [checkScrollState, scrollable]);
+
+  // Scroll tabs
+  const scrollTabs = useCallback((direction: 'left' | 'right') => {
+    const container = tabsContainerRef.current;
+    if (!container) return;
+
+    const scrollAmount = 200;
+    container.scrollBy({
+      left: direction === 'left' ? -scrollAmount : scrollAmount,
+      behavior: 'smooth'
+    });
+  }, []);
+
+  // Handle tab close
+  const handleTabClose = useCallback((tabId: string, event: React.MouseEvent) => {
+    event.stopPropagation();
+    onTabClose?.(tabId);
+  }, [onTabClose]);
+
+  // Handle tab drag and drop
+  const handleDragStart = useCallback((event: React.DragEvent, tabId: string, index: number) => {
+    event.dataTransfer.setData('text/plain', JSON.stringify({ tabId, index }));
+    event.dataTransfer.effectAllowed = 'move';
+  }, []);
+
+  const handleDragOver = useCallback((event: React.DragEvent) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+  }, []);
+
+  const handleDrop = useCallback((event: React.DragEvent, targetIndex: number) => {
+    event.preventDefault();
+    
+    try {
+      const data = JSON.parse(event.dataTransfer.getData('text/plain'));
+      const { index: fromIndex } = data;
+      
+      if (fromIndex !== targetIndex && onTabReorder) {
+        onTabReorder(fromIndex, targetIndex);
+      }
+    } catch (error) {
+      console.error('Error handling tab drop:', error);
+    }
+  }, [onTabReorder]);
+
+  return (
+    <div className={clsx('flex flex-col h-full bg-synth-panel rounded-lg overflow-hidden', className)}>
+      {/* Tab Header */}
+      <div className="flex items-center bg-synth-control border-b border-gray-600">
+        {/* Scroll Left Button */}
+        {scrollable && canScrollLeft && (
+          <button
+            onClick={() => scrollTabs('left')}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-600 transition-colors"
+            aria-label="Scroll tabs left"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Tabs Container */}
+        <div
+          ref={tabsContainerRef}
+          className={clsx(
+            'flex flex-1 min-w-0',
+            scrollable ? 'overflow-x-auto scrollbar-hide' : 'overflow-hidden'
+          )}
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <div className="flex">
+            {tabs.map((tab, index) => (
+              <div
+                key={tab.id}
+                className={clsx(
+                  'relative flex items-center gap-2 px-4 py-3 cursor-pointer transition-all duration-200',
+                  'border-r border-gray-600 min-w-0 whitespace-nowrap',
+                  'hover:bg-gray-600',
+                  tab.id === activeTabId
+                    ? 'bg-synth-panel text-synth-accent border-b-2 border-synth-accent'
+                    : 'text-gray-300'
+                )}
+                onClick={() => onTabChange(tab.id)}
+                draggable={onTabReorder !== undefined}
+                onDragStart={(e) => handleDragStart(e, tab.id, index)}
+                onDragOver={handleDragOver}
+                onDrop={(e) => handleDrop(e, index)}
+              >
+                {/* Tab Icon */}
+                {tab.icon && (
+                  <span className="flex-shrink-0">
+                    {tab.icon}
+                  </span>
+                )}
+
+                {/* Tab Title */}
+                <span className="truncate">
+                  {tab.title}
+                  {tab.dirty && <span className="ml-1 text-synth-warning">•</span>}
+                </span>
+
+                {/* Close Button */}
+                {tab.closable && onTabClose && (
+                  <button
+                    onClick={(e) => handleTabClose(tab.id, e)}
+                    className="flex-shrink-0 p-1 rounded text-gray-400 hover:text-white hover:bg-gray-700 transition-colors"
+                    aria-label={`Close ${tab.title}`}
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                )}
+
+                {/* Active Tab Indicator */}
+                {tab.id === activeTabId && (
+                  <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-synth-accent" />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Scroll Right Button */}
+        {scrollable && canScrollRight && (
+          <button
+            onClick={() => scrollTabs('right')}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-600 transition-colors"
+            aria-label="Scroll tabs right"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        )}
+
+        {/* Add Tab Button */}
+        {showAddButton && onTabAdd && tabs.length < maxTabs && (
+          <button
+            onClick={onTabAdd}
+            className="p-2 text-gray-400 hover:text-white hover:bg-gray-600 transition-colors border-l border-gray-600"
+            aria-label="Add new tab"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+
+      {/* Tab Content */}
+      <div className="flex-1 min-h-0 overflow-hidden">
+        {activeTab ? (
+          <div className="h-full overflow-y-auto">
+            {activeTab.content}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-full text-gray-400">
+            <p>No active tab</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }
