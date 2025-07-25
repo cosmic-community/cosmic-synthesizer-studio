@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef } from 'react';
-import { Mic, Square, Play, Pause, Trash2, Download, AudioWaveform, MicIcon } from 'lucide-react';
+import { Mic, Square, Play, Pause, Trash2, Download, Activity, MicIcon } from 'lucide-react';
 
 interface Recording {
   id: string;
@@ -293,7 +293,7 @@ export default function VoiceRecorder() {
                   className="bg-synth-panel rounded p-2 flex items-center justify-between"
                 >
                   <div className="flex items-center gap-2">
-                    <AudioWaveform className="w-4 h-4 text-synth-accent" />
+                    <Activity className="w-4 h-4 text-synth-accent" />
                     <div>
                       <div className="text-white text-sm">{recording.name}</div>
                       <div className="text-xs text-gray-400">

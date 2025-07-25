@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
-import { AudioWaveform, Play, Pause, Scissors, RotateCcw, Undo2, Redo2, Volume2 } from 'lucide-react';
+import { Activity, Play, Pause, Scissors, RotateCcw, Undo2, Redo2, Volume2 } from 'lucide-react';
 
 export default function WaveformEditor() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -151,7 +151,7 @@ export default function WaveformEditor() {
       <div className="p-4 border-b border-gray-700">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
-            <AudioWaveform className="w-5 h-5" />
+            <Activity className="w-5 h-5" />
             Waveform Editor
           </h3>
           <div className="flex items-center gap-2">

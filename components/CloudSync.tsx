@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Cloud, Upload, Download, Sync, Check, X, AlertCircle, Wifi, Clock } from 'lucide-react';
+import { Cloud, Upload, Download, RefreshCw, Check, X, AlertCircle, Wifi, Clock } from 'lucide-react';
 
 interface SyncItem {
   id: string;
@@ -63,7 +63,7 @@ export default function CloudSync() {
         return <Clock className="w-4 h-4 text-yellow-400" />;
       case 'uploading':
       case 'downloading':
-        return <Sync className="w-4 h-4 text-blue-400 animate-spin" />;
+        return <RefreshCw className="w-4 h-4 text-blue-400 animate-spin" />;
       case 'error':
         return <X className="w-4 h-4 text-red-400" />;
       default:
@@ -188,7 +188,7 @@ export default function CloudSync() {
               disabled={!isConnected}
               className="synth-button flex items-center gap-2"
             >
-              <Sync className="w-4 h-4" />
+              <RefreshCw className="w-4 h-4" />
               Sync All
             </button>
           </div>

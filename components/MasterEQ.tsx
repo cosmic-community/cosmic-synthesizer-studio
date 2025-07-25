@@ -75,9 +75,9 @@ export default function MasterEQ() {
                 disabled={!enabled}
                 className="h-28 w-4 slider-vertical appearance-none bg-gray-600 rounded-lg cursor-pointer disabled:opacity-50"
                 style={{
-                  writingMode: 'bt-lr',
+                  writingMode: 'vertical-lr',
                   WebkitAppearance: 'slider-vertical'
-                }}
+                } as React.CSSProperties}
               />
             </div>
             

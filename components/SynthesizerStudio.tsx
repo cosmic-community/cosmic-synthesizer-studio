@@ -55,7 +55,7 @@ import {
   Grid3x3,
   Cloud,
   Edit,
-  AudioWaveform
+  Activity
 } from 'lucide-react';
 
 const defaultSynthState: SynthState = {
@@ -106,7 +106,7 @@ const defaultDrumState: DrumSequencerState = {
 };
 
 export default function SynthesizerStudio() {
-  const [synthState, setSynthState] = useState<SynthState>(defaultSynthState);
+  const [synthState, setSynthState] = useState<SynthState>(defaultS>synthState);
   const [recordingState, setRecordingState] = useState<RecordingState>(defaultRecordingState);
   const [drumState, setDrumState] = useState<DrumSequencerState>(defaultDrumState);
   const [isLoading, setIsLoading] = useState(true);
@@ -233,7 +233,7 @@ export default function SynthesizerStudio() {
     {
       id: 'waveform',
       title: 'Waveform',
-      icon: <AudioWaveform className="w-4 h-4" />,
+      icon: <Activity className="w-4 h-4" />,
       content: <WaveformEditor />,
       closable: true
     },
