@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Volume2, Mic, Headphones, Settings, RotateCcw, Save, Load } from 'lucide-react';
+import { Volume2, Mic, Headphones, Settings, RotateCcw, Save } from 'lucide-react';
 import ChannelStrip from './ChannelStrip';
 
 export interface MixerChannel {

@@ -15,7 +15,6 @@ import {
   Grid,
   Layers,
   Save,
-  Load,
   Plus,
   Minus
 } from 'lucide-react';

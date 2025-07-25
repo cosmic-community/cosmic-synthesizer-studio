@@ -298,7 +298,7 @@ export default function ChannelStrip({
             value={channel.volume}
             onChange={(e) => onUpdate({ volume: Number(e.target.value) })}
             className="w-full synth-slider transform rotate-0"
-            style={{ height: '100px', writingMode: 'bt-lr' }}
+            style={{ height: '100px' }}
           />
         </div>
       </div>
