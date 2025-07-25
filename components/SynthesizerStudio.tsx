@@ -508,13 +508,7 @@ export default function SynthesizerStudio({
       {/* Audio Visualizer */}
       <AudioVisualizer audioEngine={audioEngineRef.current} />
 
-      {/* Piano Keyboard - always visible */}
-      <PianoKeyboard 
-        onKeyPress={handleKeyPress}
-        onKeyRelease={handleKeyRelease}
-      />
-
-      {/* Tab System for different studio sections */}
+      {/* Tab System for different studio sections - MOVED TO TOP */}
       <div className="bg-synth-panel rounded-lg overflow-hidden">
         {/* Tab navigation */}
         <div className="flex border-b border-synth-control/30">
@@ -642,6 +636,12 @@ export default function SynthesizerStudio({
           )}
         </div>
       </div>
+
+      {/* Piano Keyboard - MOVED TO BOTTOM */}
+      <PianoKeyboard 
+        onKeyPress={handleKeyPress}
+        onKeyRelease={handleKeyRelease}
+      />
 
       {/* Preset Manager Modal */}
       {showPresets && isCosmicConfigured && (
