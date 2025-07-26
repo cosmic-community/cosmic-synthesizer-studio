@@ -357,23 +357,7 @@ export const studioShortcuts: KeyboardShortcut[] = [
     action: () => console.log('Previous Preset'),
   },
 
-  // Piano keyboard
-  {
-    id: 'octave-up',
-    keys: ['x'],
-    description: 'Octave up',
-    category: 'Piano',
-    action: () => console.log('Octave Up'),
-  },
-  {
-    id: 'octave-down',
-    keys: ['z'],
-    description: 'Octave down',
-    category: 'Piano',
-    action: () => console.log('Octave Down'),
-  },
-
-  // Piano keys (C to B)
+  // Piano keyboard shortcuts - White keys
   {
     id: 'play-c',
     keys: ['a'],
@@ -382,25 +366,11 @@ export const studioShortcuts: KeyboardShortcut[] = [
     action: () => console.log('Play C'),
   },
   {
-    id: 'play-c-sharp',
-    keys: ['w'],
-    description: 'Play note C#',
-    category: 'Piano Keys',
-    action: () => console.log('Play C#'),
-  },
-  {
     id: 'play-d',
     keys: ['s'],
     description: 'Play note D',
     category: 'Piano Keys',
     action: () => console.log('Play D'),
-  },
-  {
-    id: 'play-d-sharp',
-    keys: ['e'],
-    description: 'Play note D#',
-    category: 'Piano Keys',
-    action: () => console.log('Play D#'),
   },
   {
     id: 'play-e',
@@ -417,25 +387,11 @@ export const studioShortcuts: KeyboardShortcut[] = [
     action: () => console.log('Play F'),
   },
   {
-    id: 'play-f-sharp',
-    keys: ['t'],
-    description: 'Play note F#',
-    category: 'Piano Keys',
-    action: () => console.log('Play F#'),
-  },
-  {
     id: 'play-g',
     keys: ['g'],
     description: 'Play note G',
     category: 'Piano Keys',
     action: () => console.log('Play G'),
-  },
-  {
-    id: 'play-g-sharp',
-    keys: ['y'],
-    description: 'Play note G#',
-    category: 'Piano Keys',
-    action: () => console.log('Play G#'),
   },
   {
     id: 'play-a',
@@ -445,18 +401,113 @@ export const studioShortcuts: KeyboardShortcut[] = [
     action: () => console.log('Play A'),
   },
   {
-    id: 'play-a-sharp',
-    keys: ['u'],
-    description: 'Play note A#',
-    category: 'Piano Keys',
-    action: () => console.log('Play A#'),
-  },
-  {
     id: 'play-b',
     keys: ['j'],
     description: 'Play note B',
     category: 'Piano Keys',
     action: () => console.log('Play B'),
+  },
+  {
+    id: 'play-c5',
+    keys: ['k'],
+    description: 'Play note C (higher octave)',
+    category: 'Piano Keys',
+    action: () => console.log('Play C5'),
+  },
+  {
+    id: 'play-d5',
+    keys: ['l'],
+    description: 'Play note D (higher octave)',
+    category: 'Piano Keys',
+    action: () => console.log('Play D5'),
+  },
+  {
+    id: 'play-e5',
+    keys: [';'],
+    description: 'Play note E (higher octave)',
+    category: 'Piano Keys',
+    action: () => console.log('Play E5'),
+  },
+  {
+    id: 'play-f5',
+    keys: ["'"],
+    description: 'Play note F (higher octave)',
+    category: 'Piano Keys',
+    action: () => console.log('Play F5'),
+  },
+
+  // Piano keyboard shortcuts - Black keys
+  {
+    id: 'play-c-sharp',
+    keys: ['w'],
+    description: 'Play note C#/Db',
+    category: 'Piano Keys',
+    action: () => console.log('Play C#'),
+  },
+  {
+    id: 'play-d-sharp',
+    keys: ['e'],
+    description: 'Play note D#/Eb',
+    category: 'Piano Keys',
+    action: () => console.log('Play D#'),
+  },
+  {
+    id: 'play-f-sharp',
+    keys: ['t'],
+    description: 'Play note F#/Gb',
+    category: 'Piano Keys',
+    action: () => console.log('Play F#'),
+  },
+  {
+    id: 'play-g-sharp',
+    keys: ['y'],
+    description: 'Play note G#/Ab',
+    category: 'Piano Keys',
+    action: () => console.log('Play G#'),
+  },
+  {
+    id: 'play-a-sharp',
+    keys: ['u'],
+    description: 'Play note A#/Bb',
+    category: 'Piano Keys',
+    action: () => console.log('Play A#'),
+  },
+  {
+    id: 'play-c-sharp-5',
+    keys: ['o'],
+    description: 'Play note C#/Db (higher octave)',
+    category: 'Piano Keys',
+    action: () => console.log('Play C#5'),
+  },
+  {
+    id: 'play-d-sharp-5',
+    keys: ['p'],
+    description: 'Play note D#/Eb (higher octave)',
+    category: 'Piano Keys',
+    action: () => console.log('Play D#5'),
+  },
+  {
+    id: 'play-f-sharp-5',
+    keys: [']'],
+    description: 'Play note F#/Gb (higher octave)',
+    category: 'Piano Keys',
+    action: () => console.log('Play F#5'),
+  },
+
+  // Piano octave controls
+  {
+    id: 'octave-down',
+    keys: ['z'],
+    description: 'Octave down',
+    category: 'Piano Control',
+    action: () => console.log('Octave Down'),
+  },
+  {
+    id: 'octave-up',
+    keys: ['x'],
+    description: 'Octave up',
+    category: 'Piano Control',
+    action: () => console.log('Octave Up'),
   },
 
   // View controls

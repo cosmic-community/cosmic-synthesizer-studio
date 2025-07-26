@@ -307,6 +307,36 @@ export const shortcutGroups = {
     zoomReset: { keys: ['ctrl', '0'], description: 'Reset Zoom' },
     refresh: { keys: ['f5'], description: 'Refresh', preventDefault: false },
     devTools: { keys: ['f12'], description: 'Developer Tools', preventDefault: false }
+  },
+
+  // Piano keyboard shortcuts
+  piano: {
+    // White keys
+    playC: { keys: ['a'], description: 'Play C' },
+    playD: { keys: ['s'], description: 'Play D' },
+    playE: { keys: ['d'], description: 'Play E' },
+    playF: { keys: ['f'], description: 'Play F' },
+    playG: { keys: ['g'], description: 'Play G' },
+    playA: { keys: ['h'], description: 'Play A' },
+    playB: { keys: ['j'], description: 'Play B' },
+    playC5: { keys: ['k'], description: 'Play C (octave 5)' },
+    playD5: { keys: ['l'], description: 'Play D (octave 5)' },
+    playE5: { keys: [';'], description: 'Play E (octave 5)' },
+    playF5: { keys: ["'"], description: 'Play F (octave 5)' },
+    
+    // Black keys
+    playCSharp: { keys: ['w'], description: 'Play C#' },
+    playDSharp: { keys: ['e'], description: 'Play D#' },
+    playFSharp: { keys: ['t'], description: 'Play F#' },
+    playGSharp: { keys: ['y'], description: 'Play G#' },
+    playASharp: { keys: ['u'], description: 'Play A#' },
+    playCSharp5: { keys: ['o'], description: 'Play C# (octave 5)' },
+    playDSharp5: { keys: ['p'], description: 'Play D# (octave 5)' },
+    playFSharp5: { keys: [']'], description: 'Play F# (octave 5)' },
+    
+    // Octave controls
+    octaveDown: { keys: ['z'], description: 'Octave Down' },
+    octaveUp: { keys: ['x'], description: 'Octave Up' }
   }
 };
 
@@ -366,6 +396,8 @@ export function useShortcutHelp(shortcuts: KeyboardShortcut[]) {
         category = 'Navigation';
       } else if (shortcut.keys.some(key => ['f1', 'f2', 'f3', 'f4', 'f5', 'f6', 'f7', 'f8', 'f9', 'f10', 'f11', 'f12'].includes(key))) {
         category = 'Function Keys';
+      } else if (shortcut.keys.some(key => ['a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 'w', 'e', 't', 'y', 'u', 'o', 'p', 'z', 'x'].includes(key))) {
+        category = 'Piano';
       }
 
       if (!categories.has(category)) {
