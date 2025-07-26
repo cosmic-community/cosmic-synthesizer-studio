@@ -2,201 +2,91 @@
 @tailwind components;
 @tailwind utilities;
 
-@layer base {
-  body {
-    @apply bg-slate-900 text-white;
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-  }
-
-  * {
-    @apply selection:bg-cyan-400 selection:text-slate-900;
-  }
+/* CSS Variables for theme */
+:root {
+  --synth-bg: #0f172a;
+  --synth-panel: #1e293b;
+  --synth-accent: #22d3ee;
+  --synth-text: #f8fafc;
+  --synth-muted: #64748b;
 }
 
-@layer components {
-  /* Glass morphism effects */
-  .glass-panel {
-    @apply bg-slate-800/30 backdrop-blur-md border border-slate-700/50;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  }
-
-  .glass-button {
-    @apply bg-slate-700/50 backdrop-blur-sm border border-slate-600/50;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
-  }
-
-  /* Modern buttons */
-  .btn-primary {
-    @apply px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-medium rounded-xl;
-    @apply hover:from-cyan-400 hover:to-blue-400 transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .btn-secondary {
-    @apply px-4 py-2 bg-slate-700/50 backdrop-blur-sm border border-slate-600 text-slate-300;
-    @apply hover:bg-slate-600/50 hover:text-white transition-all duration-200 rounded-lg;
-    @apply focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-900;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .btn-transport {
-    @apply p-3 bg-slate-700/50 backdrop-blur-sm border border-slate-600 text-slate-300 rounded-xl;
-    @apply hover:bg-slate-600/50 hover:text-white hover:border-slate-500 transition-all duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-900;
-    @apply disabled:opacity-50 disabled:cursor-not-allowed;
-  }
-
-  .btn-transport-active {
-    @apply bg-cyan-500/20 border-cyan-400 text-cyan-400;
-    @apply hover:bg-cyan-500/30;
-  }
-
-  .btn-transport-record {
-    @apply bg-red-500/20 border-red-400 text-red-400;
-    @apply hover:bg-red-500/30;
-  }
-
-  /* Modern controls */
-  .knob-modern {
-    @apply relative w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full;
-    @apply border-2 border-slate-500 cursor-pointer transition-all duration-200;
-    @apply hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-400/20;
-  }
-
-  .knob-modern::before {
-    content: '';
-    @apply absolute top-2 left-1/2 w-1 h-6 bg-white rounded-full transform -translate-x-1/2;
-    transform-origin: center bottom;
-  }
-
-  .slider-modern {
-    @apply appearance-none w-full h-2 bg-slate-700 rounded-lg outline-none;
-    @apply focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900;
-  }
-
-  .slider-modern::-webkit-slider-thumb {
-    @apply appearance-none w-5 h-5 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full cursor-pointer;
-    @apply hover:shadow-lg hover:shadow-cyan-400/50 transition-all duration-200;
-  }
-
-  .slider-modern::-moz-range-thumb {
-    @apply w-5 h-5 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full cursor-pointer border-0;
-  }
-
-  /* Piano keys */
-  .piano-key {
-    @apply transition-all duration-75 cursor-pointer select-none;
-  }
-
-  .piano-key.white {
-    @apply bg-gradient-to-b from-gray-100 to-white border border-gray-300 rounded-b-lg;
-    @apply hover:from-gray-50 hover:to-gray-100 active:from-gray-200 active:to-gray-300;
-    @apply shadow-md hover:shadow-lg;
-  }
-
-  .piano-key.black {
-    @apply bg-gradient-to-b from-slate-800 to-slate-900 rounded-b-md;
-    @apply hover:from-slate-700 hover:to-slate-800 active:from-slate-600 active:to-slate-700;
-    @apply shadow-lg hover:shadow-xl;
-  }
-
-  /* Drum pads */
-  .drum-pad {
-    @apply w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-800 border-2 border-slate-500;
-    @apply rounded-xl cursor-pointer transition-all duration-100;
-    @apply hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-400/20;
-    @apply active:scale-95 active:bg-gradient-to-br active:from-cyan-500 active:to-blue-500;
-  }
-
-  .drum-pad.active {
-    @apply bg-gradient-to-br from-cyan-500 to-blue-500 border-cyan-400;
-    @apply shadow-lg shadow-cyan-400/50;
-  }
-
-  /* Waveform visualization */
-  .waveform-bar {
-    @apply bg-gradient-to-t from-cyan-500 to-blue-400 transition-all duration-75 ease-out rounded-t-sm;
-  }
-
-  /* Audio level meters */
-  .level-meter {
-    @apply bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full;
-    mask: linear-gradient(to right, #000 var(--level, 0%), transparent var(--level, 0%));
-    -webkit-mask: linear-gradient(to right, #000 var(--level, 0%), transparent var(--level, 0%));
-  }
-
-  /* Effect controls */
-  .effect-control {
-    @apply glass-panel p-4 rounded-lg space-y-3;
-  }
-
-  .effect-toggle {
-    @apply w-12 h-6 bg-slate-600 rounded-full relative cursor-pointer transition-colors duration-200;
-    @apply focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900;
-  }
-
-  .effect-toggle.active {
-    @apply bg-gradient-to-r from-cyan-500 to-blue-500;
-  }
-
-  .effect-toggle::after {
-    content: '';
-    @apply absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200;
-  }
-
-  .effect-toggle.active::after {
-    @apply transform translate-x-6;
-  }
-
-  /* Sequencer grid */
-  .sequencer-step {
-    @apply w-8 h-8 bg-slate-700 border border-slate-600 rounded cursor-pointer;
-    @apply hover:bg-slate-600 transition-colors duration-100;
-  }
-
-  .sequencer-step.active {
-    @apply bg-gradient-to-br from-cyan-500 to-blue-500 border-cyan-400;
-  }
-
-  .sequencer-step.current {
-    @apply ring-2 ring-yellow-400 ring-offset-1 ring-offset-slate-900;
-  }
-
-  /* Modern input fields */
-  .input-modern {
-    @apply bg-slate-700/50 backdrop-blur-sm border border-slate-600 rounded-lg px-4 py-2;
-    @apply text-white placeholder-slate-400 outline-none;
-    @apply focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all duration-200;
-  }
-
-  /* Tooltip */
-  .tooltip {
-    @apply absolute z-50 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg border border-slate-600;
-    @apply shadow-lg backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200;
-  }
-
-  .tooltip.visible {
-    @apply opacity-100;
-  }
+/* Base styles */
+* {
+  box-sizing: border-box;
+  padding: 0;
+  margin: 0;
 }
 
-@layer utilities {
-  .text-shadow {
-    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
-  }
+html,
+body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background: var(--synth-bg);
+  color: var(--synth-text);
+}
 
-  .glow-cyan {
-    box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
-  }
+body {
+  color: rgb(var(--foreground-rgb));
+  background: linear-gradient(
+      to bottom,
+      transparent,
+      rgb(var(--background-end-rgb))
+    )
+    rgb(var(--background-start-rgb));
+}
 
-  .glow-blue {
-    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
-  }
+a {
+  color: inherit;
+  text-decoration: none;
+}
 
-  .glow-red {
-    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
-  }
+/* Glass morphism effect */
+.glass-panel {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(71, 85, 105, 0.3);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+/* Button styles */
+.btn-primary {
+  @apply bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-medium px-4 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none;
+}
+
+.btn-secondary {
+  @apply bg-slate-700 hover:bg-slate-600 text-slate-200 font-medium px-4 py-2 rounded-lg transition-all duration-200 border border-slate-600 hover:border-slate-500 disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-transport {
+  @apply w-12 h-12 rounded-full bg-slate-700 hover:bg-slate-600 border border-slate-600 hover:border-slate-500 text-slate-200 flex items-center justify-center transition-all duration-200 shadow-lg hover:shadow-xl disabled:opacity-50 disabled:cursor-not-allowed;
+}
+
+.btn-transport-active {
+  @apply bg-gradient-to-r from-green-500 to-green-600 border-green-400 text-white;
+}
+
+.btn-transport-record {
+  @apply bg-gradient-to-r from-red-500 to-red-600 border-red-400 text-white animate-pulse;
+}
+
+/* Slider styles */
+.slider-modern {
+  @apply appearance-none bg-slate-700 h-2 rounded-full outline-none;
+}
+
+.slider-modern::-webkit-slider-thumb {
+  @apply appearance-none w-5 h-5 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full cursor-pointer shadow-lg;
+}
+
+.slider-modern::-moz-range-thumb {
+  @apply w-5 h-5 bg-gradient-to-r from-cyan-400 to-cyan-600 rounded-full cursor-pointer border-none shadow-lg;
+}
+
+/* Cosmic badge styles */
+.cosmic-button {
+  @apply inline-flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white text-sm font-medium rounded-lg border border-slate-600 hover:border-slate-500 transition-all duration-200 no-underline;
 }
 
 /* Custom scrollbar */
@@ -206,38 +96,150 @@
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-slate-800 rounded-full;
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-slate-600 rounded-full;
+  background: rgba(71, 85, 105, 0.8);
+  border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-slate-500;
+  background: rgba(71, 85, 105, 1);
 }
 
-/* Animations */
-@keyframes pulse-recording {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
+/* Loading animations */
+@keyframes pulse-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px rgba(34, 211, 238, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.8);
+  }
 }
 
-.recording-indicator {
-  animation: pulse-recording 1s ease-in-out infinite;
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* Focus styles */
+input:focus,
+select:focus,
+textarea:focus {
+  @apply outline-none ring-2 ring-cyan-400/50 border-cyan-400;
+}
+
+/* Piano key active states */
+.piano-key-white {
+  background: linear-gradient(to bottom, #ffffff, #f3f4f6);
+  border: 1px solid #d1d5db;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.piano-key-white:hover {
+  background: linear-gradient(to bottom, #f9fafb, #e5e7eb);
+}
+
+.piano-key-white.active {
+  background: linear-gradient(to bottom, #22d3ee, #0891b2);
+  color: white;
+  transform: scale(0.98);
+}
+
+.piano-key-black {
+  background: linear-gradient(to bottom, #374151, #1f2937);
+  border: 1px solid #111827;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.piano-key-black:hover {
+  background: linear-gradient(to bottom, #4b5563, #374151);
+}
+
+.piano-key-black.active {
+  background: linear-gradient(to bottom, #0891b2, #0e7490);
+  transform: scale(0.95);
+}
+
+/* Drum pad styles */
+.drum-pad {
+  @apply w-full h-12 rounded-lg transition-all duration-150 border-2;
+}
+
+.drum-pad-inactive {
+  @apply bg-slate-700/50 border-slate-600 hover:bg-slate-600/50 hover:border-slate-500;
+}
+
+.drum-pad-active {
+  @apply bg-gradient-to-r from-cyan-400 to-cyan-600 border-cyan-300 shadow-lg;
+}
+
+.drum-pad-playing {
+  @apply ring-4 ring-yellow-400/50 scale-95;
+}
+
+/* Knob styles */
+.knob-track {
+  background: conic-gradient(from 225deg, transparent 0deg, transparent var(--progress, 0deg), rgba(156, 163, 175, 0.3) var(--progress, 0deg));
 }
 
 /* Responsive design */
 @media (max-width: 768px) {
   .glass-panel {
-    @apply mx-2;
+    backdrop-filter: blur(8px);
   }
   
-  .piano-key {
-    @apply text-xs;
+  .btn-transport {
+    @apply w-10 h-10;
   }
   
-  .knob-modern {
-    @apply w-12 h-12;
+  .piano-key-white {
+    min-height: 80px;
+  }
+  
+  .piano-key-black {
+    min-height: 50px;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: high) {
+  .glass-panel {
+    border: 2px solid rgba(71, 85, 105, 0.8);
+    background: rgba(30, 41, 59, 0.95);
+  }
+}
+
+/* Reduced motion support */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Print styles */
+@media print {
+  .glass-panel {
+    background: white;
+    border: 1px solid black;
+    backdrop-filter: none;
+  }
+  
+  .btn-primary,
+  .btn-secondary,
+  .btn-transport {
+    background: white;
+    color: black;
+    border: 1px solid black;
+  }
+}
+
+/* Dark mode enhancements */
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
   }
 }

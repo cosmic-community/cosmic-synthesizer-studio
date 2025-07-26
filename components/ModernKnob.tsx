@@ -1,32 +1,31 @@
 'use client';
 
 import { useState, useRef, useCallback } from 'react';
-import { clsx } from 'clsx';
 
 interface ModernKnobProps {
+  label: string;
   value: number;
   min: number;
   max: number;
   step?: number;
   onChange: (value: number) => void;
-  label: string;
   unit?: string;
+  displayValue?: number;
   size?: 'sm' | 'md' | 'lg';
-  color?: 'accent' | 'info' | 'warning';
-  disabled?: boolean;
+  color?: 'cyan' | 'blue' | 'green' | 'purple';
 }
 
 export default function ModernKnob({
+  label,
   value,
   min,
   max,
   step = 0.01,
   onChange,
-  label,
   unit = '',
+  displayValue,
   size = 'md',
-  color = 'accent',
-  disabled = false
+  color = 'cyan'
 }: ModernKnobProps) {
   const [isDragging, setIsDragging] = useState(false);
   const [startY, setStartY] = useState(0);
@@ -40,138 +39,92 @@ export default function ModernKnob({
   };
 
   const colorClasses = {
-    accent: 'border-synth-accent shadow-synth-accent/30',
-    info: 'border-synth-info shadow-synth-info/30',
-    warning: 'border-synth-warning shadow-synth-warning/30'
+    cyan: 'from-cyan-400 to-cyan-600',
+    blue: 'from-blue-400 to-blue-600',
+    green: 'from-green-400 to-green-600',
+    purple: 'from-purple-400 to-purple-600'
   };
 
+  // Normalize value to 0-1 range
   const normalizedValue = (value - min) / (max - min);
-  const rotation = normalizedValue * 270 - 135; // -135° to +135°
+  // Convert to rotation angle (-135° to +135°, 270° total range)
+  const rotation = (normalizedValue * 270) - 135;
 
   const handleMouseDown = useCallback((e: React.MouseEvent) => {
-    if (disabled) return;
-    
-    e.preventDefault();
     setIsDragging(true);
     setStartY(e.clientY);
     setStartValue(value);
-    
-    document.addEventListener('mousemove', handleMouseMove);
-    document.addEventListener('mouseup', handleMouseUp);
-  }, [disabled, value]);
+    e.preventDefault();
+  }, [value]);
 
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
-    
+
     const deltaY = startY - e.clientY; // Inverted for natural feel
-    const sensitivity = 0.005;
-    const deltaValue = deltaY * (max - min) * sensitivity;
-    const newValue = Math.max(min, Math.min(max, startValue + deltaValue));
+    const sensitivity = (max - min) / 100; // Adjust sensitivity
+    const newValue = Math.max(min, Math.min(max, startValue + (deltaY * sensitivity)));
     
-    // Snap to step
-    const steppedValue = Math.round(newValue / step) * step;
+    // Apply step if provided
+    const steppedValue = step > 0 ? Math.round(newValue / step) * step : newValue;
+    
     onChange(steppedValue);
   }, [isDragging, startY, startValue, min, max, step, onChange]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
-    document.removeEventListener('mousemove', handleMouseMove);
-    document.removeEventListener('mouseup', handleMouseUp);
-  }, [handleMouseMove]);
+  }, []);
 
-  const handleWheel = useCallback((e: React.WheelEvent) => {
-    if (disabled) return;
-    
-    e.preventDefault();
-    const delta = -e.deltaY * 0.001;
-    const newValue = Math.max(min, Math.min(max, value + delta * (max - min)));
-    const steppedValue = Math.round(newValue / step) * step;
-    onChange(steppedValue);
-  }, [disabled, value, min, max, step, onChange]);
+  // Add global mouse events
+  React.useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'grabbing';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
 
-  const formatValue = (val: number): string => {
-    if (unit === 'Hz' && val >= 1000) {
-      return `${(val / 1000).toFixed(1)}kHz`;
-    }
-    if (typeof val === 'number') {
-      return val.toFixed(val < 1 ? 2 : val < 10 ? 1 : 0);
-    }
-    return String(val);
-  };
+  const displayVal = displayValue !== undefined ? displayValue : Math.round(value * 100) / 100;
 
   return (
-    <div className="flex flex-col items-center gap-2">
-      <div
-        ref={knobRef}
-        className={clsx(
-          'relative rounded-full border-2 cursor-pointer transition-all duration-200',
-          'bg-gradient-to-br from-synth-control to-synth-panel',
-          'hover:shadow-lg active:scale-95',
-          sizeClasses[size],
-          isDragging ? colorClasses[color] : 'border-gray-600 hover:border-gray-500',
-          disabled && 'opacity-50 cursor-not-allowed'
-        )}
-        onMouseDown={handleMouseDown}
-        onWheel={handleWheel}
-      >
-        {/* Outer ring indicator */}
+    <div className="flex flex-col items-center space-y-2">
+      <label className="text-xs font-medium text-slate-300">{label}</label>
+      
+      <div className="relative">
+        {/* Knob Track */}
         <div 
-          className="absolute inset-1 rounded-full border border-gray-700"
+          className={`${sizeClasses[size]} rounded-full bg-slate-700 border-2 border-slate-600 relative cursor-grab active:cursor-grabbing transition-all duration-150 hover:border-slate-500`}
           style={{
-            background: `conic-gradient(from 0deg, 
-              transparent 0deg, 
-              transparent ${(normalizedValue * 270) + 45}deg, 
-              ${color === 'accent' ? '#00ff88' : color === 'info' ? '#4dabf7' : '#ff6b6b'} ${(normalizedValue * 270) + 45}deg,
-              ${color === 'accent' ? '#00ff88' : color === 'info' ? '#4dabf7' : '#ff6b6b'} ${(normalizedValue * 270) + 50}deg,
-              transparent ${(normalizedValue * 270) + 50}deg,
-              transparent 315deg
-            )`
+            background: `conic-gradient(from 225deg, transparent ${normalizedValue * 270}deg, rgba(156, 163, 175, 0.3) ${normalizedValue * 270}deg)`
           }}
-        />
-        
-        {/* Center knob */}
-        <div 
-          className={clsx(
-            'absolute inset-2 rounded-full transition-transform duration-100',
-            'bg-gradient-to-br from-gray-300 to-gray-600',
-            'shadow-inner',
-            isDragging && 'scale-95'
-          )}
-          style={{ transform: `rotate(${rotation}deg)` }}
         >
-          {/* Indicator dot */}
-          <div 
-            className={clsx(
-              'absolute w-1.5 h-1.5 rounded-full top-1 left-1/2 transform -translate-x-1/2',
-              color === 'accent' ? 'bg-synth-accent' : 
-              color === 'info' ? 'bg-synth-info' : 'bg-synth-warning'
-            )}
-          />
+          {/* Knob Handle */}
+          <div
+            ref={knobRef}
+            className={`absolute inset-1 rounded-full bg-gradient-to-br ${colorClasses[color]} shadow-lg transition-all duration-150 ${isDragging ? 'scale-95' : 'hover:scale-105'}`}
+            style={{
+              transform: `rotate(${rotation}deg)`
+            }}
+            onMouseDown={handleMouseDown}
+          >
+            {/* Knob Indicator */}
+            <div className="absolute top-1 left-1/2 w-0.5 h-3 bg-white rounded-full transform -translate-x-1/2 shadow-sm" />
+            
+            {/* Center Highlight */}
+            <div className="absolute inset-2 rounded-full bg-white/20 backdrop-blur-sm" />
+          </div>
         </div>
 
-        {/* Glow effect when active */}
-        {isDragging && (
-          <div 
-            className={clsx(
-              'absolute inset-0 rounded-full blur-sm -z-10',
-              color === 'accent' ? 'bg-synth-accent/20' : 
-              color === 'info' ? 'bg-synth-info/20' : 'bg-synth-warning/20'
-            )}
-          />
-        )}
-      </div>
-
-      {/* Label and value */}
-      <div className="text-center min-w-0">
-        <div className="text-xs text-gray-400 font-medium truncate">
-          {label}
-        </div>
-        <div className={clsx(
-          'text-sm font-mono font-bold mt-1',
-          color === 'accent' ? 'text-synth-accent' : 
-          color === 'info' ? 'text-synth-info' : 'text-synth-warning'
-        )}>
-          {formatValue(value)}{unit}
+        {/* Value Display */}
+        <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2">
+          <div className="text-xs font-mono text-slate-300 bg-slate-800/80 px-2 py-1 rounded backdrop-blur-sm">
+            {displayVal}{unit}
+          </div>
         </div>
       </div>
     </div>

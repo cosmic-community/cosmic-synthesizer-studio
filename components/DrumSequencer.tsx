@@ -1,435 +1,217 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { DrumSequencerState, DrumSoundConfig } from '@/types';
-import { Volume2, Play, Square, RotateCcw, Shuffle, Settings, Download } from 'lucide-react';
-import DrumSoundSelector from './DrumSoundSelector';
-import { drumKits, getDefaultDrumKit } from '@/lib/drumSounds';
+import { DrumSequencerState } from '@/types';
+import { Play, Square } from 'lucide-react';
 
 interface DrumSequencerProps {
   drumState: DrumSequencerState;
   onStateChange: (state: DrumSequencerState) => void;
-  onPlaySound?: (sound: DrumSoundConfig) => void;
 }
 
-export default function DrumSequencer({ drumState, onStateChange, onPlaySound }: DrumSequencerProps) {
-  const [selectedKit, setSelectedKit] = useState('electronic');
-  const [showSoundSelector, setShowSoundSelector] = useState(false);
-  const [swing, setSwing] = useState(0);
-  const [volume, setVolume] = useState(0.8);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-
-  // Initialize with default kit sounds if no sounds are set
-  useEffect(() => {
-    if (!drumState.sounds || drumState.sounds.length === 0) {
-      const defaultKit = getDefaultDrumKit();
-      updateState({ 
-        sounds: defaultKit.sounds.slice(0, 8),
-        pattern: Array(8).fill(null).map(() => Array(16).fill(false))
-      });
+export default function DrumSequencer({ drumState, onStateChange }: DrumSequencerProps) {
+  const toggleStep = (soundIndex: number, stepIndex: number) => {
+    const newPattern = [...(drumState.pattern || [])];
+    if (!newPattern[soundIndex]) {
+      newPattern[soundIndex] = Array(16).fill(false);
     }
-  }, []);
-
-  // Sequencer timing
-  useEffect(() => {
-    if (drumState.isPlaying) {
-      const stepDuration = (60 / drumState.bpm / 4) * 1000; // 16th notes
-      
-      intervalRef.current = setInterval(() => {
-        updateState({ 
-          currentStep: (drumState.currentStep + 1) % 16 
-        });
-        
-        // Trigger sounds for current step
-        if (drumState.pattern && drumState.sounds) {
-          drumState.sounds.forEach((sound, soundIndex) => {
-            if (drumState.pattern![soundIndex]?.[drumState.currentStep] && onPlaySound) {
-              // Apply swing timing
-              const swingDelay = (drumState.currentStep % 2 === 1) ? swing * stepDuration * 0.1 : 0;
-              setTimeout(() => onPlaySound(sound), swingDelay);
-            }
-          });
-        }
-      }, stepDuration);
-    } else {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-        intervalRef.current = null;
-      }
-    }
-
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-    };
-  }, [drumState.isPlaying, drumState.bpm, drumState.currentStep, drumState.pattern, drumState.sounds, swing, onPlaySound]);
-
-  const updateState = (updates: Partial<DrumSequencerState>) => {
-    onStateChange({ ...drumState, ...updates });
+    newPattern[soundIndex][stepIndex] = !newPattern[soundIndex][stepIndex];
+    
+    onStateChange({
+      ...drumState,
+      pattern: newPattern
+    });
   };
 
-  const toggleStep = (soundIndex: number, stepIndex: number) => {
-    if (!drumState.pattern || !drumState.pattern[soundIndex]) return;
-    
-    const newPattern = [...drumState.pattern];
-    if (newPattern[soundIndex] && newPattern[soundIndex][stepIndex] !== undefined) {
-      newPattern[soundIndex][stepIndex] = !newPattern[soundIndex][stepIndex];
-      updateState({ pattern: newPattern });
-    }
+  const selectSound = (soundIndex: number) => {
+    onStateChange({
+      ...drumState,
+      selectedSound: soundIndex
+    });
+  };
+
+  const updateBPM = (bpm: number) => {
+    onStateChange({
+      ...drumState,
+      bpm: Math.max(60, Math.min(200, bpm))
+    });
   };
 
   const clearPattern = () => {
-    const newPattern = Array(8).fill(null).map(() => Array(16).fill(false));
-    updateState({ pattern: newPattern });
-  };
-
-  const randomizePattern = () => {
-    const newPattern = Array(8).fill(null).map((_, soundIndex) => {
-      // Different probabilities for different sound types
-      const sound = drumState.sounds?.[soundIndex];
-      let probability = 0.15; // default
-      
-      if (sound) {
-        switch (sound.type) {
-          case 'kick':
-            probability = 0.25;
-            break;
-          case 'snare':
-          case 'clap':
-            probability = 0.2;
-            break;
-          case 'hihat':
-            probability = 0.4;
-            break;
-          case 'openhat':
-            probability = 0.1;
-            break;
-          case 'perc':
-            probability = 0.15;
-            break;
-          default:
-            probability = 0.12;
-        }
-      }
-      
-      return Array(16).fill(null).map(() => Math.random() < probability);
+    onStateChange({
+      ...drumState,
+      pattern: Array(8).fill(null).map(() => Array(16).fill(false)),
+      currentStep: 0
     });
-    updateState({ pattern: newPattern });
-  };
-
-  const duplicatePattern = (soundIndex: number) => {
-    if (!drumState.pattern || !drumState.pattern[soundIndex]) return;
-    
-    const pattern = drumState.pattern[soundIndex];
-    const newPattern = [...drumState.pattern];
-    
-    // Find next empty slot
-    const emptySlot = newPattern.findIndex((p, i) => i !== soundIndex && p.every(step => !step));
-    if (emptySlot >= 0) {
-      newPattern[emptySlot] = [...pattern];
-      updateState({ pattern: newPattern });
-    }
-  };
-
-  const shiftPattern = (soundIndex: number, direction: 'left' | 'right') => {
-    if (!drumState.pattern || !drumState.pattern[soundIndex]) return;
-    
-    const pattern = [...drumState.pattern[soundIndex]];
-    const newPattern = [...drumState.pattern];
-    
-    if (direction === 'left') {
-      pattern.push(pattern.shift()!);
-    } else {
-      pattern.unshift(pattern.pop()!);
-    }
-    
-    newPattern[soundIndex] = pattern;
-    updateState({ pattern: newPattern });
-  };
-
-  const exportPattern = () => {
-    const patternData = {
-      kit: selectedKit,
-      sounds: drumState.sounds,
-      pattern: drumState.pattern,
-      bpm: drumState.bpm,
-      swing,
-      volume
-    };
-    
-    const blob = new Blob([JSON.stringify(patternData, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `drum-pattern-${Date.now()}.json`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-
-  const handleKitChange = (kitId: string) => {
-    setSelectedKit(kitId);
-    const kit = drumKits.find(k => k.id === kitId);
-    if (kit) {
-      updateState({ 
-        sounds: kit.sounds.slice(0, 8),
-        bpm: kit.bpm || drumState.bpm
-      });
-    }
-  };
-
-  const handleSoundsChange = (sounds: DrumSoundConfig[]) => {
-    updateState({ sounds: sounds.slice(0, 8) });
-  };
-
-  const getStepIntensity = (soundIndex: number, stepIndex: number): number => {
-    if (!drumState.pattern?.[soundIndex]?.[stepIndex]) return 0;
-    
-    // Add some variation based on step position
-    let intensity = 0.8;
-    
-    // Accents on downbeats
-    if (stepIndex % 4 === 0) intensity += 0.2;
-    // Slight accent on off-beats
-    if (stepIndex % 2 === 1) intensity += 0.1;
-    
-    return Math.min(intensity, 1.0);
   };
 
   return (
-    <div className="bg-synth-panel p-6 rounded-lg space-y-6">
+    <div className="space-y-6">
+      {/* Transport Controls */}
       <div className="flex items-center justify-between">
-        <h3 className="text-xl font-bold text-synth-accent flex items-center gap-2">
-          <Volume2 className="w-5 h-5" />
-          Advanced Drum Sequencer
-        </h3>
-        
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-300">BPM:</label>
+            <span className="text-sm text-slate-300">BPM:</span>
             <input
               type="number"
               min="60"
               max="200"
               value={drumState.bpm}
-              onChange={(e) => updateState({ bpm: Number(e.target.value) })}
-              className="w-16 px-2 py-1 bg-synth-control border border-gray-600 rounded text-white text-sm"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-300">Swing:</label>
-            <input
-              type="range"
-              min="0"
-              max="50"
-              value={swing}
-              onChange={(e) => setSwing(Number(e.target.value))}
-              className="w-16"
-            />
-          </div>
-          
-          <button onClick={clearPattern} className="synth-button text-sm flex items-center gap-1">
-            <RotateCcw className="w-3 h-3" />
-            Clear
-          </button>
-          
-          <button onClick={randomizePattern} className="synth-button text-sm flex items-center gap-1">
-            <Shuffle className="w-3 h-3" />
-            Random
-          </button>
-          
-          <button 
-            onClick={() => setShowSoundSelector(!showSoundSelector)} 
-            className={`synth-button text-sm flex items-center gap-1 ${showSoundSelector ? 'active' : ''}`}
-          >
-            <Settings className="w-3 h-3" />
-            Sounds
-          </button>
-          
-          <button onClick={exportPattern} className="synth-button text-sm flex items-center gap-1">
-            <Download className="w-3 h-3" />
-            Export
-          </button>
-        </div>
-      </div>
-
-      {/* Step indicator - enhanced with swing visualization */}
-      <div className="mb-6">
-        <div className="flex gap-1 mb-2">
-          {Array(16).fill(null).map((_, index) => (
-            <div
-              key={index}
-              className={`h-3 flex-1 rounded transition-all duration-150 ${
-                drumState.currentStep === index 
-                  ? 'bg-synth-accent shadow-lg' 
-                  : index % 4 === 0 
-                    ? 'bg-synth-info' 
-                    : index % 2 === 1 && swing > 0
-                      ? 'bg-yellow-500 opacity-50'
-                      : 'bg-synth-control'
-              }`}
-            />
-          ))}
-        </div>
-        <div className="flex gap-1 text-xs text-gray-400">
-          {Array(16).fill(null).map((_, index) => (
-            <div key={index} className="flex-1 text-center">
-              {index + 1}
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Drum patterns - enhanced with better visualization */}
-      <div className="space-y-2">
-        {drumState.sounds?.map((sound, soundIndex) => (
-          <div key={soundIndex} className="flex items-center gap-3 group">
-            {/* Sound info */}
-            <div className="w-24 text-sm font-medium text-gray-300 truncate flex-shrink-0">
-              <div className="flex items-center gap-2">
-                <div 
-                  className="w-3 h-3 rounded-full"
-                  style={{ backgroundColor: sound.color || '#888888' }}
-                />
-                <span className="truncate">{sound.name}</span>
-              </div>
-            </div>
-            
-            {/* Pattern grid */}
-            <div className="flex gap-1 flex-1">
-              {Array(16).fill(null).map((_, stepIndex) => {
-                const isActive = drumState.pattern?.[soundIndex]?.[stepIndex];
-                const intensity = getStepIntensity(soundIndex, stepIndex);
-                
-                return (
-                  <button
-                    key={stepIndex}
-                    onClick={() => toggleStep(soundIndex, stepIndex)}
-                    className={`drum-pad flex-1 h-8 rounded transition-all duration-150 border ${
-                      isActive
-                        ? 'border-synth-accent shadow-lg' 
-                        : 'border-gray-600 hover:border-gray-500'
-                    } ${
-                      drumState.currentStep === stepIndex 
-                        ? 'ring-2 ring-synth-info ring-opacity-50' 
-                        : ''
-                    }`}
-                    style={{
-                      backgroundColor: isActive 
-                        ? sound.color || '#00d4ff'
-                        : 'transparent',
-                      opacity: isActive ? intensity : 0.3
-                    }}
-                  />
-                );
-              })}
-            </div>
-
-            {/* Sound controls */}
-            <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-              <button
-                onClick={() => onPlaySound?.(sound)}
-                className="w-6 h-6 bg-synth-accent rounded flex items-center justify-center hover:bg-synth-info transition-colors"
-              >
-                <Play className="w-3 h-3 text-black" />
-              </button>
-              
-              <button
-                onClick={() => shiftPattern(soundIndex, 'left')}
-                className="w-6 h-6 bg-gray-600 rounded flex items-center justify-center hover:bg-gray-500 transition-colors text-xs"
-              >
-                ←
-              </button>
-              
-              <button
-                onClick={() => shiftPattern(soundIndex, 'right')}
-                className="w-6 h-6 bg-gray-600 rounded flex items-center justify-center hover:bg-gray-500 transition-colors text-xs"
-              >
-                →
-              </button>
-            </div>
-
-            {/* Volume control */}
-            <div className="w-16 flex-shrink-0">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={sound.volume || 0.8}
-                onChange={(e) => {
-                  const newSounds = [...(drumState.sounds || [])];
-                  if (newSounds[soundIndex]) {
-                    newSounds[soundIndex] = {
-                      ...newSounds[soundIndex],
-                      volume: Number(e.target.value)
-                    };
-                    updateState({ sounds: newSounds });
-                  }
-                }}
-                className="w-full h-2 bg-synth-control rounded-lg appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right, ${sound.color || '#00d4ff'} 0%, ${sound.color || '#00d4ff'} ${((sound.volume || 0.8) * 100)}%, #374151 ${((sound.volume || 0.8) * 100)}%, #374151 100%)`
-                }}
-              />
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {/* Transport controls */}
-      <div className="flex justify-between items-center pt-4 border-t border-gray-600">
-        <div className="text-sm text-gray-400 space-y-1">
-          <p>Click pads to create patterns • Use sound selector for different kits</p>
-          <p>Swing: {swing}% • Master Volume: {Math.round(volume * 100)}%</p>
-        </div>
-        
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-2">
-            <label className="text-sm text-gray-300">Master:</label>
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.05"
-              value={volume}
-              onChange={(e) => setVolume(Number(e.target.value))}
-              className="w-20"
+              onChange={(e) => updateBPM(parseInt(e.target.value))}
+              className="w-16 bg-slate-700/50 border border-slate-600 rounded px-2 py-1 text-white text-sm text-center"
             />
           </div>
           
           <button
-            onClick={() => updateState({ isPlaying: !drumState.isPlaying })}
-            className={`synth-button flex items-center gap-2 ${drumState.isPlaying ? 'active' : ''}`}
+            onClick={clearPattern}
+            className="px-3 py-1 bg-slate-700 hover:bg-slate-600 rounded text-sm text-slate-300 transition-colors"
           >
-            {drumState.isPlaying ? (
-              <>
-                <Square className="w-4 h-4" />
-                Stop
-              </>
-            ) : (
-              <>
-                <Play className="w-4 h-4" />
-                Play
-              </>
-            )}
+            Clear
           </button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className={`flex items-center gap-1 px-2 py-1 rounded text-xs ${
+            drumState.isPlaying ? 'bg-green-900/50 text-green-400' : 'bg-slate-700/50 text-slate-400'
+          }`}>
+            {drumState.isPlaying ? <Play className="w-3 h-3" /> : <Square className="w-3 h-3" />}
+            {drumState.isPlaying ? 'Playing' : 'Stopped'}
+          </div>
         </div>
       </div>
 
-      {/* Sound Selector */}
-      {showSoundSelector && (
-        <div className="border-t border-gray-600 pt-6">
-          <DrumSoundSelector
-            selectedKit={selectedKit}
-            selectedSounds={drumState.sounds || []}
-            onKitChange={handleKitChange}
-            onSoundsChange={handleSoundsChange}
-            onPlaySound={onPlaySound}
-          />
+      {/* Step Sequencer Grid */}
+      <div className="glass-panel p-4 rounded-xl">
+        <div className="space-y-3">
+          {/* Step Numbers */}
+          <div className="flex items-center gap-1">
+            <div className="w-20 text-xs text-slate-400">Track</div>
+            {Array.from({ length: 16 }, (_, i) => (
+              <div
+                key={i}
+                className={`flex-1 text-center text-xs py-1 rounded ${
+                  drumState.currentStep === i
+                    ? 'bg-cyan-500 text-white'
+                    : 'bg-slate-700/50 text-slate-400'
+                }`}
+              >
+                {i + 1}
+              </div>
+            ))}
+          </div>
+
+          {/* Drum Tracks */}
+          {(drumState.sounds || []).map((sound, soundIndex) => (
+            <div key={soundIndex} className="flex items-center gap-1">
+              {/* Sound Name */}
+              <button
+                onClick={() => selectSound(soundIndex)}
+                className={`w-20 text-left text-xs px-2 py-2 rounded transition-colors ${
+                  drumState.selectedSound === soundIndex
+                    ? 'bg-cyan-600 text-white'
+                    : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
+                }`}
+              >
+                {sound.name}
+              </button>
+
+              {/* Step Buttons */}
+              {Array.from({ length: 16 }, (_, stepIndex) => (
+                <button
+                  key={stepIndex}
+                  onClick={() => toggleStep(soundIndex, stepIndex)}
+                  className={`flex-1 h-8 rounded transition-all ${
+                    drumState.pattern?.[soundIndex]?.[stepIndex]
+                      ? 'bg-gradient-to-br from-cyan-400 to-cyan-600 shadow-lg'
+                      : 'bg-slate-700/50 hover:bg-slate-600/50 border border-slate-600'
+                  } ${
+                    drumState.isPlaying && drumState.currentStep === stepIndex
+                      ? 'ring-2 ring-yellow-400'
+                      : ''
+                  }`}
+                />
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Sound Parameters */}
+      {drumState.sounds && drumState.sounds[drumState.selectedSound] && (
+        <div className="glass-panel p-4 rounded-xl">
+          <h4 className="text-sm font-semibold text-cyan-400 mb-3">
+            {drumState.sounds[drumState.selectedSound].name} Settings
+          </h4>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+              <label className="block text-xs text-slate-300 mb-2">Volume</label>
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.01"
+                value={drumState.sounds[drumState.selectedSound].volume}
+                onChange={(e) => {
+                  const newSounds = [...drumState.sounds];
+                  newSounds[drumState.selectedSound] = {
+                    ...newSounds[drumState.selectedSound],
+                    volume: parseFloat(e.target.value)
+                  };
+                  onStateChange({ ...drumState, sounds: newSounds });
+                }}
+                className="w-full slider-modern"
+              />
+              <div className="text-xs text-slate-400 mt-1">
+                {Math.round(drumState.sounds[drumState.selectedSound].volume * 100)}%
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-300 mb-2">Decay</label>
+              <input
+                type="range"
+                min="0.1"
+                max="2"
+                step="0.01"
+                value={drumState.sounds[drumState.selectedSound].decay}
+                onChange={(e) => {
+                  const newSounds = [...drumState.sounds];
+                  newSounds[drumState.selectedSound] = {
+                    ...newSounds[drumState.selectedSound],
+                    decay: parseFloat(e.target.value)
+                  };
+                  onStateChange({ ...drumState, sounds: newSounds });
+                }}
+                className="w-full slider-modern"
+              />
+              <div className="text-xs text-slate-400 mt-1">
+                {drumState.sounds[drumState.selectedSound].decay.toFixed(2)}s
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs text-slate-300 mb-2">Frequency</label>
+              <input
+                type="range"
+                min="20"
+                max="10000"
+                step="1"
+                value={drumState.sounds[drumState.selectedSound].frequency}
+                onChange={(e) => {
+                  const newSounds = [...drumState.sounds];
+                  newSounds[drumState.selectedSound] = {
+                    ...newSounds[drumState.selectedSound],
+                    frequency: parseFloat(e.target.value)
+                  };
+                  onStateChange({ ...drumState, sounds: newSounds });
+                }}
+                className="w-full slider-modern"
+              />
+              <div className="text-xs text-slate-400 mt-1">
+                {Math.round(drumState.sounds[drumState.selectedSound].frequency)}Hz
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

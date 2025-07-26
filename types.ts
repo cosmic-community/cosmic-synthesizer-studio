@@ -1,3 +1,70 @@
+// Core synthesizer types
+export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
+export type FilterType = 'lowpass' | 'highpass' | 'bandpass' | 'notch';
+export type EffectType = 'reverb' | 'delay' | 'distortion' | 'chorus' | 'phaser' | 'flanger' | 'compressor' | 'eq';
+
+// Effect configurations
+export interface ReverbEffect {
+  active: boolean;
+  amount: number;
+  roomSize: number;
+}
+
+export interface DelayEffect {
+  active: boolean;
+  time: number;
+  feedback: number;
+}
+
+export interface DistortionEffect {
+  active: boolean;
+  amount: number;
+  type: 'soft' | 'hard' | 'tube' | 'fuzz' | 'bitcrush';
+}
+
+export interface ChorusEffect {
+  active: boolean;
+  rate: number;
+  depth: number;
+}
+
+export interface PhaserEffect {
+  active: boolean;
+  rate: number;
+  depth: number;
+}
+
+export interface FlangerEffect {
+  active: boolean;
+  rate: number;
+  feedback: number;
+}
+
+export interface CompressorEffect {
+  active: boolean;
+  threshold: number;
+  ratio: number;
+}
+
+export interface EQEffect {
+  active: boolean;
+  low: number;
+  mid: number;
+  high: number;
+}
+
+export interface EffectsState {
+  reverb: ReverbEffect;
+  delay: DelayEffect;
+  distortion: DistortionEffect;
+  chorus: ChorusEffect;
+  phaser: PhaserEffect;
+  flanger: FlangerEffect;
+  compressor: CompressorEffect;
+  eq: EQEffect;
+}
+
+// Main synthesizer state
 export interface SynthState {
   oscillatorType: OscillatorType;
   filterCutoff: number;
@@ -10,127 +77,106 @@ export interface SynthState {
   effects: EffectsState;
 }
 
-export interface EffectsState {
-  reverb: {
-    active: boolean;
-    amount: number;
-    roomSize?: number;
-  };
-  delay: {
-    active: boolean;
-    time: number;
-    feedback: number;
-  };
-  distortion: {
-    active: boolean;
-    amount: number;
-    type?: 'soft' | 'hard' | 'tube' | 'fuzz' | 'bitcrush';
-  };
-  chorus: {
-    active: boolean;
-    rate: number;
-    depth: number;
-  };
-  phaser?: {
-    active: boolean;
-    rate: number;
-    depth: number;
-  };
-  flanger?: {
-    active: boolean;
-    rate: number;
-    feedback: number;
-  };
-  compressor?: {
-    active: boolean;
-    threshold: number;
-    ratio: number;
-  };
-  eq?: {
-    active: boolean;
-    low: number;
-    mid: number;
-    high: number;
-  };
-}
-
+// Recording state
 export interface RecordingState {
   isRecording: boolean;
   isPlaying: boolean;
   duration: number;
-  audioBuffer: AudioBuffer | null;
+  audioBuffer: Blob | null;
   waveformData: number[];
+}
+
+// Drum sequencer types
+export interface DrumSoundConfig {
+  name: string;
+  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'clap' | 'crash' | 'ride' | 'tom';
+  frequency: number;
+  decay: number;
+  volume: number;
+  oscillatorType?: OscillatorType;
 }
 
 export interface DrumSequencerState {
   isPlaying: boolean;
   currentStep: number;
   bpm: number;
-  pattern?: boolean[][];
+  pattern: boolean[][];
   selectedSound: number;
-  sounds?: DrumSoundConfig[];
+  sounds: DrumSoundConfig[];
 }
 
-// Enhanced DrumSound interface with advanced parameters - volume is now required to match lib/drumSounds.ts
-export interface DrumSoundConfig {
-  name: string;
-  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'crash' | 'ride' | 'clap' | 'perc' | 'cymbal' | 'tom';
+// Piano sound configuration
+export interface PianoHarmonic {
   frequency: number;
+  gain: number;
+  type: OscillatorType;
+}
+
+export interface PianoEnvelope {
+  attack: number;
   decay: number;
-  volume: number; // Changed from optional to required to match lib/drumSounds.ts
-  pitch?: number;
-  resonance?: number;
-  distortion?: number;
-  reverb?: number;
-  compression?: number;
-  oscillatorType?: OscillatorType;
-  filterType?: 'lowpass' | 'highpass' | 'bandpass' | 'notch';
-  filterFrequency?: number;
-  envelope?: {
+  sustain: number;
+  release: number;
+}
+
+export interface PianoFilter {
+  type: FilterType;
+  frequency: number;
+  resonance: number;
+  envelopeAmount: number;
+}
+
+export interface PianoEffects {
+  reverb?: {
+    amount: number;
+  };
+  chorus?: {
+    amount: number;
+    rate: number;
+    depth: number;
+  };
+  eq?: {
+    low: number;
+    mid: number;
+    high: number;
+  };
+  compression?: {
+    threshold: number;
+    ratio: number;
     attack: number;
-    decay: number;
-    sustain: number;
     release: number;
   };
-  noise?: {
-    amount: number;
-    frequency: number;
-  };
-  color?: string;
-  category?: string;
 }
 
-// Legacy DrumSound interface for compatibility
-export interface DrumSound {
+export interface PianoSoundConfig {
   name: string;
-  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'crash' | 'ride';
-  frequency: number;
-  decay: number;
-  volume?: number;
+  baseVolume: number;
+  oscillatorType: OscillatorType;
+  harmonics?: PianoHarmonic[];
+  envelope: PianoEnvelope;
+  filter: PianoFilter;
+  effects: PianoEffects;
 }
 
-export interface AudioNode {
-  connect(destination: AudioNode | AudioParam): void;
-  disconnect(): void;
-}
-
-export interface AudioParam {
-  value: number;
-  setValueAtTime(value: number, startTime: number): void;
-  linearRampToValueAtTime(value: number, endTime: number): void;
-  exponentialRampToValueAtTime(value: number, endTime: number): void;
-}
-
-export type OscillatorType = 'sine' | 'square' | 'sawtooth' | 'triangle';
-
-// Effect types for audio engine - EXPORTED for lib/audioEngine.ts
-export type EffectType = 'reverb' | 'delay' | 'distortion' | 'chorus' | 'phaser' | 'flanger' | 'compressor' | 'eq';
-
-export interface Preset {
+// Cosmic CMS types
+export interface CosmicObject {
   id: string;
   title: string;
+  slug: string;
+  created_at: string;
+  modified_at: string;
+  metadata?: Record<string, any>;
+}
+
+export interface CosmicResponse<T> {
+  objects: T[];
+  total: number;
+}
+
+// Preset types for Cosmic CMS
+export interface SynthPreset extends CosmicObject {
   metadata: {
-    oscillator_type: OscillatorType;
+    oscillator_type: string;
     filter_cutoff: number;
     filter_resonance: number;
     envelope_attack: number;
@@ -139,85 +185,166 @@ export interface Preset {
     envelope_release: number;
     effects: string[];
     reverb_amount?: number;
-    reverb_room_size?: number;
     delay_time?: number;
     delay_feedback?: number;
     distortion_amount?: number;
-    distortion_type?: string;
     chorus_rate?: number;
     chorus_depth?: number;
-    phaser_rate?: number;
-    phaser_depth?: number;
-    flanger_rate?: number;
-    flanger_feedback?: number;
-    compressor_threshold?: number;
-    compressor_ratio?: number;
-    eq_low?: number;
-    eq_mid?: number;
-    eq_high?: number;
   };
 }
 
-// EXPORTED for PresetManager component - Updated to extend CosmicObjectBase
-export interface SynthPreset extends CosmicObjectBase {
-  type: 'presets';
-  metadata: Preset['metadata'];
-}
-
-export interface VisualizationData {
-  waveform: number[];
-  frequency: number[];
-  volume: number;
-}
-
-export interface CosmicObjectBase {
-  id: string;
-  title: string;
-  slug: string;
-  status: 'published' | 'draft';
-  created_at: string;
-  modified_at: string;
-  thumbnail?: string;
-}
-
-export interface PresetObject extends CosmicObjectBase {
-  type: 'presets';
-  metadata: Preset['metadata'];
-}
-
-export interface RecordingObject extends CosmicObjectBase {
-  type: 'recordings';
+// Recording types for Cosmic CMS
+export interface Recording extends CosmicObject {
   metadata: {
     duration: number;
-    file_size: number;
-    recording_date: string;
-    audio_file: {
-      url: string;
-      imgix_url: string;
-    };
+    bpm: number;
+    waveform_data: number[];
+    social_shares: number;
+    tags: string[];
+    preset_used?: string;
   };
 }
 
-// EXPORTED for cosmic.ts usage
-export type Recording = RecordingObject;
-
-export interface DrumPatternObject extends CosmicObjectBase {
-  type: 'drum-patterns';
+// Drum pattern types for Cosmic CMS
+export interface DrumPattern extends CosmicObject {
   metadata: {
     bpm: number;
-    pattern_data: string; // JSON stringified pattern
-    sounds_config: string; // JSON stringified sounds array
+    steps: number;
+    pattern: boolean[][];
+    sounds: DrumSoundConfig[];
   };
 }
 
-// EXPORTED for cosmic.ts usage
-export type DrumPattern = DrumPatternObject;
+// Audio analysis types
+export interface AudioAnalyserData {
+  frequencyData: Uint8Array;
+  timeDomainData: Uint8Array;
+  volume: number;
+  pitch: number;
+}
 
-// Generic Cosmic API response type - EXPORTED for cosmic.ts
-export interface CosmicResponse<T = any> {
-  objects?: T[];
-  object?: T;
-  total?: number;
-  status?: string;
-  message?: string;
+// Global transport state
+export interface TransportState {
+  isPlaying: boolean;
+  isRecording: boolean;
+  bpm: number;
+  currentBar: number;
+  currentBeat: number;
+  masterVolume: number;
+}
+
+// MIDI types
+export interface MIDINote {
+  note: number;
+  velocity: number;
+  channel: number;
+  timestamp: number;
+}
+
+export interface MIDIControlChange {
+  controller: number;
+  value: number;
+  channel: number;
+  timestamp: number;
+}
+
+// Project types
+export interface ProjectData {
+  name: string;
+  bpm: number;
+  synthState: SynthState;
+  drumPattern: DrumSequencerState;
+  recordings: Recording[];
+  presets: SynthPreset[];
+  created_at: string;
+  modified_at: string;
+}
+
+// Loop station types
+export interface LoopTrack {
+  id: string;
+  name: string;
+  audioBuffer: AudioBuffer | null;
+  isPlaying: boolean;
+  volume: number;
+  length: number;
+}
+
+export interface LoopStationState {
+  tracks: LoopTrack[];
+  masterTempo: number;
+  isRecording: boolean;
+  recordingTrack: number;
+}
+
+// Automation types
+export interface AutomationPoint {
+  time: number;
+  value: number;
+}
+
+export interface AutomationLane {
+  parameter: string;
+  points: AutomationPoint[];
+  isEnabled: boolean;
+}
+
+export interface AutomationState {
+  lanes: AutomationLane[];
+  isPlaying: boolean;
+  currentTime: number;
+}
+
+// Sample library types
+export interface Sample {
+  id: string;
+  name: string;
+  url: string;
+  duration: number;
+  category: string;
+  tags: string[];
+  key?: string;
+  bpm?: number;
+}
+
+export interface SampleCategory {
+  id: string;
+  name: string;
+  samples: Sample[];
+}
+
+// Mixer types
+export interface MixerChannel {
+  id: string;
+  name: string;
+  volume: number;
+  pan: number;
+  mute: boolean;
+  solo: boolean;
+  effects: EffectsState;
+}
+
+export interface MixerState {
+  channels: MixerChannel[];
+  masterVolume: number;
+  masterEffects: EffectsState;
+}
+
+// Spectrum analyzer types
+export interface SpectrumAnalyzerSettings {
+  fftSize: number;
+  smoothingTimeConstant: number;
+  minDecibels: number;
+  maxDecibels: number;
+  showPeaks: boolean;
+  logScale: boolean;
+}
+
+// Voice recorder types
+export interface VoiceRecordingState {
+  isRecording: boolean;
+  isPaused: boolean;
+  duration: number;
+  audioLevel: number;
+  recordedChunks: Blob[];
 }

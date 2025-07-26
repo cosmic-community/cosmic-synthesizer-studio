@@ -2,9 +2,7 @@
 
 import { useState } from 'react';
 import { RecordingState } from '@/types';
-import { formatTime, shareToTwitter, shareToFacebook, shareViaWebAPI, downloadBlob } from '@/lib/utils';
-import { saveRecording } from '@/lib/cosmic';
-import { Mic, Play, Square, Download, Share2, Save } from 'lucide-react';
+import { Mic, Square, Play, Pause, Download, Save } from 'lucide-react';
 
 interface RecordingControlsProps {
   recordingState: RecordingState;
@@ -12,187 +10,184 @@ interface RecordingControlsProps {
 }
 
 export default function RecordingControls({ recordingState, onStateChange }: RecordingControlsProps) {
-  const [isSaving, setIsSaving] = useState(false);
-  const [savedRecording, setSavedRecording] = useState<any>(null);
+  const [recordingName, setRecordingName] = useState('');
 
-  const handleSaveRecording = async () => {
+  const startRecording = () => {
+    onStateChange({
+      ...recordingState,
+      isRecording: true,
+      duration: 0
+    });
+  };
+
+  const stopRecording = () => {
+    onStateChange({
+      ...recordingState,
+      isRecording: false
+    });
+  };
+
+  const playRecording = () => {
     if (!recordingState.audioBuffer) return;
+    
+    onStateChange({
+      ...recordingState,
+      isPlaying: !recordingState.isPlaying
+    });
+  };
 
-    setIsSaving(true);
+  const downloadRecording = () => {
+    if (!recordingState.audioBuffer) return;
+    
+    // Create download link
+    const url = URL.createObjectURL(recordingState.audioBuffer);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = recordingName || `recording-${Date.now()}.webm`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const saveToCloud = async () => {
+    if (!recordingState.audioBuffer) return;
+    
     try {
-      const title = `Recording ${new Date().toLocaleDateString()} ${new Date().toLocaleTimeString()}`;
-      const recording = await saveRecording({
-        title,
-        duration: recordingState.duration,
-        bpm: 128, // Default BPM
-        waveform_data: recordingState.waveformData,
-        tags: ['synthesizer', 'electronic']
-      });
-      
-      setSavedRecording(recording);
+      // Here you would implement saving to Cosmic CMS
+      console.log('Saving recording to cloud...');
     } catch (error) {
       console.error('Failed to save recording:', error);
-    } finally {
-      setIsSaving(false);
     }
   };
 
-  const handleShare = async (platform: 'twitter' | 'facebook' | 'native') => {
-    const title = savedRecording?.title || 'My Synthesizer Recording';
-    const text = `Check out my new track created with Cosmic Synthesizer Studio!`;
-    const url = window.location.href;
-
-    try {
-      switch (platform) {
-        case 'twitter':
-          shareToTwitter(text, url);
-          break;
-        case 'facebook':
-          shareToFacebook(url);
-          break;
-        case 'native':
-          await shareViaWebAPI({ title, text, url });
-          break;
-      }
-    } catch (error) {
-      console.error('Failed to share:', error);
-    }
-  };
-
-  const handleDownload = () => {
-    if (recordingState.audioBuffer) {
-      // In a real implementation, you'd convert the AudioBuffer to a downloadable format
-      const blob = new Blob(['audio data'], { type: 'audio/wav' });
-      downloadBlob(blob, `recording-${Date.now()}.wav`);
-    }
+  const formatDuration = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
   return (
-    <div className="bg-synth-panel p-6 rounded-lg">
-      <h3 className="text-xl font-bold text-synth-accent mb-6 flex items-center gap-2">
-        <Mic className="w-5 h-5" />
-        Recording Studio
-      </h3>
-
-      {/* Recording Status */}
-      <div className="bg-synth-control p-4 rounded-lg mb-6">
-        <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className={`w-4 h-4 rounded-full ${
-              recordingState.isRecording 
-                ? 'bg-red-500 recording-indicator' 
-                : recordingState.audioBuffer 
-                  ? 'bg-green-500' 
-                  : 'bg-gray-500'
-            }`} />
-            <span className="text-white font-medium">
-              {recordingState.isRecording 
-                ? 'Recording...' 
-                : recordingState.audioBuffer 
-                  ? 'Recording Ready' 
-                  : 'No Recording'
-              }
-            </span>
-          </div>
-          
-          <div className="text-synth-accent font-mono text-lg">
-            {formatTime(recordingState.duration)}
-          </div>
-        </div>
-
-        {/* Waveform Preview */}
-        {recordingState.waveformData.length > 0 && (
-          <div className="h-12 bg-synth-bg rounded flex items-end gap-0.5 p-2">
-            {recordingState.waveformData.slice(0, 100).map((value, index) => (
-              <div
-                key={index}
-                className="waveform-bar flex-1 min-w-0"
-                style={{ height: `${Math.max(2, value * 100)}%` }}
-              />
-            ))}
-          </div>
-        )}
-      </div>
-
+    <div className="space-y-6">
       {/* Recording Controls */}
-      <div className="grid grid-cols-2 gap-4 mb-6">
-        <button
-          disabled={recordingState.isRecording}
-          className={`synth-button flex items-center justify-center gap-2 ${
-            recordingState.isPlaying ? 'active' : ''
-          } ${recordingState.isRecording ? 'opacity-50 cursor-not-allowed' : ''}`}
-        >
-          {recordingState.isPlaying ? <Square className="w-4 h-4" /> : <Play className="w-4 h-4" />}
-          {recordingState.isPlaying ? 'Stop' : 'Play'}
-        </button>
-
-        <button
-          onClick={handleDownload}
-          disabled={!recordingState.audioBuffer}
-          className={`synth-button flex items-center justify-center gap-2 ${
-            !recordingState.audioBuffer ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          <Download className="w-4 h-4" />
-          Download
-        </button>
-      </div>
-
-      {/* Save to Cosmic */}
-      <div className="mb-6">
-        <button
-          onClick={handleSaveRecording}
-          disabled={!recordingState.audioBuffer || isSaving}
-          className={`synth-button w-full flex items-center justify-center gap-2 ${
-            !recordingState.audioBuffer || isSaving ? 'opacity-50 cursor-not-allowed' : ''
-          }`}
-        >
-          <Save className="w-4 h-4" />
-          {isSaving ? 'Saving to Cosmic...' : 'Save to Cosmic'}
-        </button>
+      <div className="glass-panel p-6 rounded-xl">
+        <h3 className="text-lg font-semibold text-cyan-400 mb-4">Recording Studio</h3>
         
-        {savedRecording && (
-          <p className="text-green-400 text-sm mt-2 text-center">
-            ✓ Saved: {savedRecording.title}
-          </p>
-        )}
-      </div>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-4">
+            <button
+              onClick={recordingState.isRecording ? stopRecording : startRecording}
+              className={`btn-transport ${recordingState.isRecording ? 'btn-transport-record' : ''}`}
+            >
+              {recordingState.isRecording ? (
+                <Square className="w-5 h-5" />
+              ) : (
+                <Mic className="w-5 h-5" />
+              )}
+            </button>
 
-      {/* Social Sharing */}
-      {savedRecording && (
-        <div>
-          <h4 className="text-lg font-semibold text-white mb-4 flex items-center gap-2">
-            <Share2 className="w-4 h-4" />
-            Share Your Track
-          </h4>
-          
-          <div className="grid grid-cols-3 gap-2">
             <button
-              onClick={() => handleShare('twitter')}
-              className="synth-button text-sm bg-blue-600 hover:bg-blue-700"
+              onClick={playRecording}
+              className="btn-transport"
+              disabled={!recordingState.audioBuffer}
             >
-              Twitter
+              {recordingState.isPlaying ? (
+                <Pause className="w-5 h-5" />
+              ) : (
+                <Play className="w-5 h-5" />
+              )}
             </button>
-            
-            <button
-              onClick={() => handleShare('facebook')}
-              className="synth-button text-sm bg-blue-800 hover:bg-blue-900"
-            >
-              Facebook
-            </button>
-            
-            <button
-              onClick={() => handleShare('native')}
-              className="synth-button text-sm"
-            >
-              More...
-            </button>
+
+            <div className="text-sm text-slate-300">
+              Duration: {formatDuration(recordingState.duration)}
+            </div>
+          </div>
+
+          <div className={`px-3 py-1 rounded text-xs ${
+            recordingState.isRecording 
+              ? 'bg-red-900/50 text-red-400 animate-pulse' 
+              : 'bg-slate-700/50 text-slate-400'
+          }`}>
+            {recordingState.isRecording ? 'REC' : 'READY'}
           </div>
         </div>
-      )}
 
-      <div className="mt-4 text-sm text-gray-400">
-        <p>Record your performance and share it with the world. Recordings are saved to your Cosmic bucket.</p>
+        {/* Recording Name Input */}
+        <div className="mb-4">
+          <label className="block text-sm text-slate-300 mb-2">Recording Name</label>
+          <input
+            type="text"
+            value={recordingName}
+            onChange={(e) => setRecordingName(e.target.value)}
+            placeholder="Enter recording name..."
+            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400"
+          />
+        </div>
+
+        {/* Action Buttons */}
+        <div className="flex gap-3">
+          <button
+            onClick={downloadRecording}
+            disabled={!recordingState.audioBuffer}
+            className="btn-secondary flex items-center gap-2"
+          >
+            <Download className="w-4 h-4" />
+            Download
+          </button>
+
+          <button
+            onClick={saveToCloud}
+            disabled={!recordingState.audioBuffer}
+            className="btn-primary flex items-center gap-2"
+          >
+            <Save className="w-4 h-4" />
+            Save to Cloud
+          </button>
+        </div>
+      </div>
+
+      {/* Waveform Display */}
+      <div className="glass-panel p-6 rounded-xl">
+        <h4 className="text-sm font-semibold text-cyan-400 mb-3">Waveform</h4>
+        
+        <div className="h-32 bg-slate-800/50 rounded-lg relative overflow-hidden">
+          {recordingState.waveformData && recordingState.waveformData.length > 0 ? (
+            <div className="flex items-center h-full px-2">
+              {recordingState.waveformData.map((value, index) => (
+                <div
+                  key={index}
+                  className="flex-1 bg-gradient-to-t from-cyan-600 to-cyan-400 mx-px"
+                  style={{
+                    height: `${(value / 255) * 100}%`,
+                    minHeight: '2px'
+                  }}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center h-full text-slate-400">
+              {recordingState.isRecording ? (
+                <div className="text-center">
+                  <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                  <p>Recording...</p>
+                </div>
+              ) : (
+                <p>No recording available</p>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Recording Tips */}
+      <div className="glass-panel p-4 rounded-xl">
+        <h4 className="text-sm font-semibold text-cyan-400 mb-2">Recording Tips</h4>
+        <ul className="text-xs text-slate-300 space-y-1">
+          <li>• Click the record button to start capturing audio</li>
+          <li>• Play notes on the keyboard or drum sequencer while recording</li>
+          <li>• Use effects to enhance your recording</li>
+          <li>• Download locally or save to cloud for sharing</li>
+        </ul>
       </div>
     </div>
   );

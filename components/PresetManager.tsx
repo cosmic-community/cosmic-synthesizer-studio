@@ -1,22 +1,22 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { X, Save, Download, Trash2, Play } from 'lucide-react';
-import { SynthState, SynthPreset } from '@/types';
+import { SynthState } from '@/types';
 import { getPresets, savePreset } from '@/lib/cosmic';
+import { X, Save, Download, Search } from 'lucide-react';
 
 interface PresetManagerProps {
   onClose: () => void;
-  onLoadPreset: (preset: SynthPreset) => void;
+  onLoadPreset: (preset: any) => void;
   currentState: SynthState;
 }
 
 export default function PresetManager({ onClose, onLoadPreset, currentState }: PresetManagerProps) {
-  const [presets, setPresets] = useState<SynthPreset[]>([]);
+  const [presets, setPresets] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [newPresetName, setNewPresetName] = useState('');
-  const [showSaveForm, setShowSaveForm] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [presetName, setPresetName] = useState('');
 
   useEffect(() => {
     loadPresets();
@@ -24,8 +24,9 @@ export default function PresetManager({ onClose, onLoadPreset, currentState }: P
 
   const loadPresets = async () => {
     try {
-      const fetchedPresets = await getPresets();
-      setPresets(fetchedPresets);
+      setLoading(true);
+      const presetsData = await getPresets();
+      setPresets(presetsData);
     } catch (error) {
       console.error('Failed to load presets:', error);
     } finally {
@@ -34,18 +35,16 @@ export default function PresetManager({ onClose, onLoadPreset, currentState }: P
   };
 
   const handleSavePreset = async () => {
-    if (!newPresetName.trim()) return;
+    if (!presetName.trim()) {
+      alert('Please enter a preset name');
+      return;
+    }
 
-    setSaving(true);
     try {
-      const effects: string[] = [];
-      if (currentState.effects.reverb.active) effects.push('reverb');
-      if (currentState.effects.delay.active) effects.push('delay');
-      if (currentState.effects.distortion.active) effects.push('distortion');
-      if (currentState.effects.chorus.active) effects.push('chorus');
-
+      setSaving(true);
+      
       const presetData = {
-        title: newPresetName,
+        title: presetName,
         oscillator_type: currentState.oscillatorType,
         filter_cutoff: currentState.filterCutoff,
         filter_resonance: currentState.filterResonance,
@@ -53,184 +52,136 @@ export default function PresetManager({ onClose, onLoadPreset, currentState }: P
         envelope_decay: currentState.decay,
         envelope_sustain: currentState.sustain,
         envelope_release: currentState.release,
-        effects,
-        reverb_amount: currentState.effects.reverb.amount,
-        delay_time: currentState.effects.delay.time,
-        delay_feedback: currentState.effects.delay.feedback,
-        distortion_amount: currentState.effects.distortion.amount,
-        chorus_rate: currentState.effects.chorus.rate,
-        chorus_depth: currentState.effects.chorus.depth
+        effects: Object.keys(currentState.effects).filter(
+          key => currentState.effects[key as keyof typeof currentState.effects]?.active
+        ),
+        reverb_amount: currentState.effects.reverb?.amount || 0,
+        delay_time: currentState.effects.delay?.time || 0,
+        delay_feedback: currentState.effects.delay?.feedback || 0,
+        distortion_amount: currentState.effects.distortion?.amount || 0,
+        chorus_rate: currentState.effects.chorus?.rate || 0,
+        chorus_depth: currentState.effects.chorus?.depth || 0
       };
 
-      const savedPreset = await savePreset(presetData);
-      setPresets(prev => [savedPreset, ...prev]);
-      setNewPresetName('');
-      setShowSaveForm(false);
+      await savePreset(presetData);
+      setPresetName('');
+      await loadPresets(); // Reload presets
     } catch (error) {
       console.error('Failed to save preset:', error);
+      alert('Failed to save preset. Please try again.');
     } finally {
       setSaving(false);
     }
   };
 
-  const getPresetPreview = (preset: SynthPreset) => {
-    const effects = preset.metadata?.effects || [];
-    return {
-      oscillator: preset.metadata?.oscillator_type || 'sawtooth',
-      filter: `${preset.metadata?.filter_cutoff || 1000}Hz`,
-      effects: effects.length > 0 ? effects.join(', ') : 'None'
-    };
-  };
+  const filteredPresets = presets.filter(preset =>
+    preset.title.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-synth-panel rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <div className="glass-panel w-full max-w-4xl max-h-[80vh] overflow-hidden rounded-2xl">
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
-          <h2 className="text-xl font-bold text-synth-accent">Preset Manager</h2>
+        <div className="flex items-center justify-between p-6 border-b border-slate-700">
+          <h2 className="text-xl font-bold text-white">Preset Manager</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-white transition-colors"
+            className="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-700 text-slate-400 hover:text-white transition-colors"
           >
-            <X className="w-6 h-6" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {/* Save Current State */}
-          <div className="mb-8">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-semibold text-white">Save Current State</h3>
+        <div className="p-6 space-y-6">
+          {/* Save New Preset */}
+          <div className="glass-panel p-4 rounded-xl">
+            <h3 className="text-lg font-semibold text-cyan-400 mb-3">Save Current Settings</h3>
+            <div className="flex gap-3">
+              <input
+                type="text"
+                value={presetName}
+                onChange={(e) => setPresetName(e.target.value)}
+                placeholder="Enter preset name..."
+                className="flex-1 bg-slate-700/50 border border-slate-600 rounded-lg px-3 py-2 text-white placeholder-slate-400"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSavePreset();
+                  }
+                }}
+              />
               <button
-                onClick={() => setShowSaveForm(!showSaveForm)}
-                className="synth-button flex items-center gap-2"
+                onClick={handleSavePreset}
+                disabled={saving || !presetName.trim()}
+                className="btn-primary flex items-center gap-2 px-4"
               >
                 <Save className="w-4 h-4" />
-                Save Preset
+                {saving ? 'Saving...' : 'Save'}
               </button>
             </div>
-
-            {showSaveForm && (
-              <div className="bg-synth-bg p-4 rounded-lg">
-                <div className="flex gap-4">
-                  <input
-                    type="text"
-                    value={newPresetName}
-                    onChange={(e) => setNewPresetName(e.target.value)}
-                    placeholder="Enter preset name..."
-                    className="flex-1 px-3 py-2 bg-synth-control border border-gray-600 rounded text-white"
-                    disabled={saving}
-                  />
-                  <button
-                    onClick={handleSavePreset}
-                    disabled={!newPresetName.trim() || saving}
-                    className="synth-button disabled:opacity-50"
-                  >
-                    {saving ? 'Saving...' : 'Save'}
-                  </button>
-                  <button
-                    onClick={() => setShowSaveForm(false)}
-                    className="px-4 py-2 text-gray-400 hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            )}
           </div>
 
-          {/* Presets Grid */}
-          <div>
-            <h3 className="text-lg font-semibold text-white mb-4">
-              Saved Presets ({presets.length})
-            </h3>
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <input
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search presets..."
+              className="w-full bg-slate-700/50 border border-slate-600 rounded-lg pl-10 pr-4 py-2 text-white placeholder-slate-400"
+            />
+          </div>
 
+          {/* Presets List */}
+          <div className="space-y-2 max-h-96 overflow-y-auto">
             {loading ? (
               <div className="text-center py-8">
-                <div className="w-8 h-8 border-2 border-synth-control border-t-synth-accent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-gray-400">Loading presets...</p>
+                <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                <p className="text-slate-400">Loading presets...</p>
               </div>
-            ) : presets.length === 0 ? (
-              <div className="text-center py-8 text-gray-400">
-                <p>No presets saved yet.</p>
-                <p className="text-sm mt-2">Save your first preset above!</p>
+            ) : filteredPresets.length === 0 ? (
+              <div className="text-center py-8">
+                <p className="text-slate-400">
+                  {searchTerm ? 'No presets found matching your search.' : 'No presets saved yet.'}
+                </p>
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {presets.map((preset) => {
-                  const preview = getPresetPreview(preset);
-                  
-                  return (
-                    <div
-                      key={preset.id}
-                      className="bg-synth-bg p-4 rounded-lg border border-gray-700 hover:border-synth-accent transition-colors"
-                    >
-                      <div className="flex items-start justify-between mb-3">
-                        <h4 className="font-semibold text-white truncate">
-                          {preset.title}
-                        </h4>
-                        <div className="flex gap-1 ml-2">
-                          <button
-                            onClick={() => onLoadPreset(preset)}
-                            className="p-1 text-synth-info hover:text-white transition-colors"
-                            title="Load Preset"
-                          >
-                            <Play className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="p-1 text-gray-400 hover:text-white transition-colors"
-                            title="Download Preset"
-                          >
-                            <Download className="w-4 h-4" />
-                          </button>
-                          <button
-                            className="p-1 text-red-400 hover:text-red-300 transition-colors"
-                            title="Delete Preset"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </div>
-
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Oscillator:</span>
-                          <span className="text-white capitalize">{preview.oscillator}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Filter:</span>
-                          <span className="text-white">{preview.filter}</span>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Effects:</span>
-                          <span className="text-white text-right">{preview.effects}</span>
-                        </div>
-                      </div>
-
-                      <div className="mt-3 pt-3 border-t border-gray-700">
-                        <div className="text-xs text-gray-500">
-                          {preset.created_at && new Date(preset.created_at).toLocaleDateString()}
-                        </div>
+              filteredPresets.map((preset) => (
+                <div
+                  key={preset.id}
+                  className="glass-panel p-4 rounded-lg hover:bg-slate-700/30 transition-colors"
+                >
+                  <div className="flex items-center justify-between">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-white">{preset.title}</h4>
+                      <div className="text-sm text-slate-400 mt-1">
+                        {preset.metadata?.oscillator_type && (
+                          <span className="mr-4">
+                            Wave: {preset.metadata.oscillator_type}
+                          </span>
+                        )}
+                        {preset.metadata?.effects && preset.metadata.effects.length > 0 && (
+                          <span>
+                            Effects: {preset.metadata.effects.join(', ')}
+                          </span>
+                        )}
                       </div>
                     </div>
-                  );
-                })}
-              </div>
+                    
+                    <button
+                      onClick={() => {
+                        onLoadPreset(preset);
+                        onClose();
+                      }}
+                      className="btn-secondary flex items-center gap-2"
+                    >
+                      <Download className="w-4 h-4" />
+                      Load
+                    </button>
+                  </div>
+                </div>
+              ))
             )}
-          </div>
-        </div>
-
-        {/* Footer */}
-        <div className="p-6 border-t border-gray-700 bg-synth-bg">
-          <div className="flex justify-between items-center text-sm text-gray-400">
-            <p>Presets are automatically synced to your Cosmic CMS bucket</p>
-            <button
-              onClick={onClose}
-              className="synth-button"
-            >
-              Close
-            </button>
           </div>
         </div>
       </div>
