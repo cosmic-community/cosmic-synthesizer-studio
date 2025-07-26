@@ -1,22 +1,33 @@
 'use client';
 
-import { useState } from 'react';
-import { Grid3x3, Play, Pause, Copy, Trash2, RotateCcw, Shuffle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Grid3x3, Play, Pause, Copy, Trash2, RotateCcw, Shuffle, Volume2 } from 'lucide-react';
+import { DrumSoundConfig } from '@/types';
 
 interface Pattern {
   id: string;
   name: string;
   steps: boolean[][];
   length: number;
-  sounds: string[];
+  sounds: DrumSoundConfig[];
 }
 
-export default function PatternEditor() {
+interface PatternEditorProps {
+  onPatternChange?: (pattern: Pattern) => void;
+  audioEngine?: any;
+}
+
+export default function PatternEditor({ onPatternChange, audioEngine }: PatternEditorProps) {
   const [currentPattern, setCurrentPattern] = useState<Pattern>({
     id: '1',
     name: 'Rock Beat',
     length: 16,
-    sounds: ['Kick', 'Snare', 'Hi-Hat', 'Open Hat'],
+    sounds: [
+      { name: 'Kick', type: 'kick', frequency: 60, decay: 0.5, volume: 0.8, oscillatorType: 'sine' },
+      { name: 'Snare', type: 'snare', frequency: 200, decay: 0.2, volume: 0.7, oscillatorType: 'noise' },
+      { name: 'Hi-Hat', type: 'hihat', frequency: 8000, decay: 0.1, volume: 0.6, oscillatorType: 'square' },
+      { name: 'Open Hat', type: 'openhat', frequency: 9000, decay: 0.3, volume: 0.5, oscillatorType: 'square' },
+    ],
     steps: [
       [true, false, false, false, true, false, false, false, true, false, false, false, true, false, false, false], // Kick
       [false, false, false, false, true, false, false, false, false, false, false, false, true, false, false, false], // Snare
@@ -29,6 +40,48 @@ export default function PatternEditor() {
   const [currentStep, setCurrentStep] = useState(0);
   const [selectedSound, setSelectedSound] = useState(0);
   const [bpm, setBpm] = useState(128);
+  const intervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Update parent component when pattern changes
+  useEffect(() => {
+    if (onPatternChange) {
+      onPatternChange(currentPattern);
+    }
+  }, [currentPattern, onPatternChange]);
+
+  // Handle playback
+  useEffect(() => {
+    if (isPlaying) {
+      const stepTime = (60 / bpm / 4) * 1000; // 16th notes
+      intervalRef.current = setInterval(() => {
+        setCurrentStep((prev) => {
+          const nextStep = (prev + 1) % currentPattern.length;
+          
+          // Play sounds for current step
+          if (audioEngine) {
+            currentPattern.steps.forEach((track, soundIndex) => {
+              if (track[prev] && currentPattern.sounds[soundIndex]) {
+                audioEngine.playDrumSound(currentPattern.sounds[soundIndex]);
+              }
+            });
+          }
+          
+          return nextStep;
+        });
+      }, stepTime);
+    } else {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+        intervalRef.current = null;
+      }
+    }
+
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    };
+  }, [isPlaying, bpm, currentPattern, audioEngine]);
 
   const toggleStep = (soundIndex: number, stepIndex: number) => {
     setCurrentPattern(prev => ({
@@ -61,8 +114,21 @@ export default function PatternEditor() {
     navigator.clipboard.writeText(JSON.stringify(currentPattern));
   };
 
+  const togglePlayback = () => {
+    setIsPlaying(!isPlaying);
+  };
+
+  const updateSoundVolume = (soundIndex: number, volume: number) => {
+    setCurrentPattern(prev => ({
+      ...prev,
+      sounds: prev.sounds.map((sound, i) =>
+        i === soundIndex ? { ...sound, volume } : sound
+      )
+    }));
+  };
+
   const getSoundColor = (index: number) => {
-    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24', '#f0932b', '#eb4d4b', '#6c5ce7', '#a29bfe'];
+    const colors = ['#ff6b6b', '#4ecdc4', '#45b7d1', '#f9ca24'];
     return colors[index % colors.length];
   };
 
@@ -86,7 +152,7 @@ export default function PatternEditor() {
         </div>
         <div className="flex gap-1">
           <button
-            onClick={() => setIsPlaying(!isPlaying)}
+            onClick={togglePlayback}
             className="synth-button-small"
           >
             {isPlaying ? <Pause className="w-4 h-4" /> : <Play className="w-4 h-4" />}
@@ -120,7 +186,7 @@ export default function PatternEditor() {
       {/* Step Sequencer Grid */}
       <div className="space-y-2">
         {/* Step Numbers */}
-        <div className="flex gap-1 ml-16">
+        <div className="flex gap-1 ml-20">
           {Array.from({ length: currentPattern.length }, (_, i) => (
             <div
               key={i}
@@ -138,23 +204,37 @@ export default function PatternEditor() {
         </div>
 
         {/* Sound Rows */}
-        {currentPattern.sounds.map((soundName, soundIndex) => (
+        {currentPattern.sounds.map((sound, soundIndex) => (
           <div key={soundIndex} className="flex items-center gap-1">
-            {/* Sound Label */}
-            <button
-              onClick={() => setSelectedSound(soundIndex)}
-              className={`w-14 h-6 text-xs rounded flex items-center justify-center font-medium transition-colors ${
-                selectedSound === soundIndex
-                  ? 'text-white'
-                  : 'text-gray-400 hover:text-white'
-              }`}
-              style={{
-                backgroundColor: selectedSound === soundIndex ? getSoundColor(soundIndex) : 'transparent',
-                border: `1px solid ${getSoundColor(soundIndex)}`
-              }}
-            >
-              {soundName}
-            </button>
+            {/* Sound Label and Volume */}
+            <div className="w-16 flex flex-col gap-1">
+              <button
+                onClick={() => setSelectedSound(soundIndex)}
+                className={`h-6 text-xs rounded flex items-center justify-center font-medium transition-colors ${
+                  selectedSound === soundIndex
+                    ? 'text-white'
+                    : 'text-gray-400 hover:text-white'
+                }`}
+                style={{
+                  backgroundColor: selectedSound === soundIndex ? getSoundColor(soundIndex) : 'transparent',
+                  border: `1px solid ${getSoundColor(soundIndex)}`
+                }}
+              >
+                {sound.name}
+              </button>
+              <div className="flex items-center gap-1">
+                <Volume2 className="w-2 h-2 text-gray-400" />
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={sound.volume}
+                  onChange={(e) => updateSoundVolume(soundIndex, parseFloat(e.target.value))}
+                  className="flex-1 h-1 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                />
+              </div>
+            </div>
 
             {/* Step Buttons */}
             {currentPattern.steps[soundIndex]?.map((isActive, stepIndex) => (
@@ -215,46 +295,6 @@ export default function PatternEditor() {
             </button>
           ))}
         </div>
-      </div>
-
-      {/* Quick Actions */}
-      <div className="flex gap-2 mt-4">
-        <button
-          onClick={() => {
-            // Shift pattern left
-            setCurrentPattern(prev => ({
-              ...prev,
-              steps: prev.steps.map(sound => [...sound.slice(1), sound[0]])
-            }));
-          }}
-          className="synth-button-small flex-1"
-        >
-          ← Shift
-        </button>
-        <button
-          onClick={() => {
-            // Shift pattern right
-            setCurrentPattern(prev => ({
-              ...prev,
-              steps: prev.steps.map(sound => [sound[sound.length - 1], ...sound.slice(0, -1)])
-            }));
-          }}
-          className="synth-button-small flex-1"
-        >
-          Shift →
-        </button>
-        <button
-          onClick={() => {
-            // Reverse pattern
-            setCurrentPattern(prev => ({
-              ...prev,
-              steps: prev.steps.map(sound => [...sound].reverse())
-            }));
-          }}
-          className="synth-button-small flex-1"
-        >
-          <RotateCcw className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
