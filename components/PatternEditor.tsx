@@ -24,7 +24,7 @@ export default function PatternEditor({ onPatternChange, audioEngine }: PatternE
     length: 16,
     sounds: [
       { name: 'Kick', type: 'kick', frequency: 60, decay: 0.5, volume: 0.8, oscillatorType: 'sine' },
-      { name: 'Snare', type: 'snare', frequency: 200, decay: 0.2, volume: 0.7, oscillatorType: 'noise' },
+      { name: 'Snare', type: 'snare', frequency: 200, decay: 0.2, volume: 0.7, oscillatorType: 'square' },
       { name: 'Hi-Hat', type: 'hihat', frequency: 8000, decay: 0.1, volume: 0.6, oscillatorType: 'square' },
       { name: 'Open Hat', type: 'openhat', frequency: 9000, decay: 0.3, volume: 0.5, oscillatorType: 'square' },
     ],

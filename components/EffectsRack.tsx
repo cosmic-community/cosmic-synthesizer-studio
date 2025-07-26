@@ -146,7 +146,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
             }`}
             style={{
               backgroundColor: activeEffectPanel === effect.id ? effect.color : undefined,
-              ringColor: getEffectActive(effect.id as keyof SynthState['effects']) ? effect.color : undefined
+              ...(getEffectActive(effect.id as keyof SynthState['effects']) ? { '--tw-ring-color': effect.color } as React.CSSProperties : {})
             }}
           >
             {effect.icon}
@@ -418,7 +418,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
                     value={synthState.effects.eq?.low || 0}
                     onChange={(e) => updateEffect('eq', { low: Number(e.target.value) })}
                     className="synth-slider vertical"
-                    style={{ writingMode: 'bt-lr', height: '120px' }}
+                    style={{ transform: 'rotate(-90deg)', height: '120px' }}
                   />
                   <div className="text-xs text-gray-400 mt-2">
                     {(synthState.effects.eq?.low || 0) > 0 ? '+' : ''}{(synthState.effects.eq?.low || 0)}dB
@@ -436,7 +436,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
                     value={synthState.effects.eq?.mid || 0}
                     onChange={(e) => updateEffect('eq', { mid: Number(e.target.value) })}
                     className="synth-slider vertical"
-                    style={{ writingMode: 'bt-lr', height: '120px' }}
+                    style={{ transform: 'rotate(-90deg)', height: '120px' }}
                   />
                   <div className="text-xs text-gray-400 mt-2">
                     {(synthState.effects.eq?.mid || 0) > 0 ? '+' : ''}{(synthState.effects.eq?.mid || 0)}dB
@@ -454,7 +454,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
                     value={synthState.effects.eq?.high || 0}
                     onChange={(e) => updateEffect('eq', { high: Number(e.target.value) })}
                     className="synth-slider vertical"
-                    style={{ writingMode: 'bt-lr', height: '120px' }}
+                    style={{ transform: 'rotate(-90deg)', height: '120px' }}
                   />
                   <div className="text-xs text-gray-400 mt-2">
                     {(synthState.effects.eq?.high || 0) > 0 ? '+' : ''}{(synthState.effects.eq?.high || 0)}dB
