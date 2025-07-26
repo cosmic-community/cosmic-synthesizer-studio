@@ -604,7 +604,10 @@ export class AudioEngine {
   }
 
   public playDrumSound(sound: DrumSoundConfig): void {
-    if (!this.isInitialized || !this.audioContext || !this.masterGain) return;
+    if (!this.isInitialized || !this.audioContext || !this.masterGain) {
+      console.warn('Audio engine not initialized, cannot play drum sound');
+      return;
+    }
 
     // Try to resume context if suspended
     if (this.audioContext.state === 'suspended') {
@@ -615,115 +618,150 @@ export class AudioEngine {
     try {
       const now = this.audioContext.currentTime;
       
-      // Create main oscillator
+      // Create simplified drum sound synthesis
       const oscillator = this.audioContext.createOscillator();
       const envelope = this.audioContext.createGain();
-      const filter = this.audioContext.createBiquadFilter();
       const volumeGain = this.audioContext.createGain();
-
-      // Configure oscillator
+      
+      // Configure oscillator based on drum type
       oscillator.type = sound.oscillatorType || 'sine';
-      oscillator.frequency.value = sound.frequency * (sound.pitch || 1.0);
-
-      // Configure filter
-      filter.type = sound.filterType || 'lowpass';
-      filter.frequency.value = sound.filterFrequency || sound.frequency * 2;
-      filter.Q.value = sound.resonance || 0.5;
-
+      
+      // Adjust frequency based on drum type
+      let baseFreq = sound.frequency;
+      switch (sound.type) {
+        case 'kick':
+          baseFreq = Math.max(40, Math.min(120, sound.frequency));
+          oscillator.type = 'sine';
+          break;
+        case 'snare':
+          baseFreq = Math.max(150, Math.min(400, sound.frequency));
+          oscillator.type = 'square';
+          break;
+        case 'hihat':
+        case 'openhat':
+          baseFreq = Math.max(5000, Math.min(15000, sound.frequency));
+          oscillator.type = 'square';
+          break;
+        default:
+          baseFreq = sound.frequency;
+      }
+      
+      oscillator.frequency.value = baseFreq;
+      
       // Configure volume
-      volumeGain.gain.value = sound.volume || 0.8;
-
-      // Create noise source for certain drum types
+      volumeGain.gain.value = Math.max(0.1, Math.min(1.0, sound.volume || 0.8));
+      
+      // Create noise for snare/hihat sounds
       let noiseSource: AudioBufferSourceNode | null = null;
-      let noiseGain: GainNode | null = null;
+      let noiseMixer: GainNode | null = null;
       
-      if (sound.noise && sound.noise.amount > 0) {
-        const bufferSize = this.audioContext.sampleRate * 0.1; // 100ms of noise
-        const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
-        const output = noiseBuffer.getChannelData(0);
-        
-        for (let i = 0; i < bufferSize; i++) {
-          output[i] = Math.random() * 2 - 1;
+      if (['snare', 'hihat', 'openhat', 'clap'].includes(sound.type)) {
+        try {
+          const bufferSize = this.audioContext.sampleRate * 0.1; // 100ms of noise
+          const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          
+          for (let i = 0; i < bufferSize; i++) {
+            output[i] = Math.random() * 2 - 1;
+          }
+          
+          noiseSource = this.audioContext.createBufferSource();
+          noiseSource.buffer = noiseBuffer;
+          
+          noiseMixer = this.audioContext.createGain();
+          
+          // Set noise amount based on drum type
+          switch (sound.type) {
+            case 'snare':
+              noiseMixer.gain.value = 0.6;
+              break;
+            case 'hihat':
+            case 'openhat':
+              noiseMixer.gain.value = 0.8;
+              break;
+            case 'clap':
+              noiseMixer.gain.value = 0.4;
+              break;
+            default:
+              noiseMixer.gain.value = 0.3;
+          }
+          
+          noiseSource.connect(noiseMixer);
+        } catch (noiseError) {
+          console.warn('Failed to create noise source:', noiseError);
         }
-        
-        noiseSource = this.audioContext.createBufferSource();
-        noiseSource.buffer = noiseBuffer;
-        noiseSource.loop = true;
-        
-        noiseGain = this.audioContext.createGain();
-        noiseGain.gain.value = sound.noise.amount;
-        
-        const noiseFilter = this.audioContext.createBiquadFilter();
-        noiseFilter.type = 'highpass';
-        noiseFilter.frequency.value = sound.noise.frequency || 1000;
-        
-        noiseSource.connect(noiseFilter);
-        noiseFilter.connect(noiseGain);
       }
-
-      // Connect the audio chain
-      oscillator.connect(filter);
-      filter.connect(envelope);
-      envelope.connect(volumeGain);
       
-      if (noiseGain) {
-        noiseGain.connect(envelope);
+      // Connect the audio chain
+      const mixer = this.audioContext.createGain();
+      oscillator.connect(mixer);
+      if (noiseMixer) {
+        noiseMixer.connect(mixer);
       }
-
-      // Apply effects if specified
-      let outputNode: AudioNode = volumeGain;
-
-      if (sound.distortion && sound.distortion > 0 && this.distortion) {
-        const distortionGain = this.audioContext.createGain();
-        distortionGain.gain.value = sound.distortion;
-        volumeGain.connect(distortionGain);
-        distortionGain.connect(this.distortion);
-        outputNode = this.distortion;
+      
+      mixer.connect(envelope);
+      envelope.connect(volumeGain);
+      volumeGain.connect(this.masterGain);
+      
+      // Apply simple envelope based on drum type
+      const attack = 0.001;
+      let decay = sound.decay || 0.5;
+      let sustain = 0.3;
+      let release = decay * 0.8;
+      
+      // Adjust envelope based on drum type
+      switch (sound.type) {
+        case 'kick':
+          decay = Math.min(1.5, Math.max(0.3, decay));
+          sustain = 0.4;
+          release = decay * 0.6;
+          break;
+        case 'snare':
+        case 'clap':
+          decay = Math.min(0.3, Math.max(0.1, decay));
+          sustain = 0.1;
+          release = decay * 0.5;
+          break;
+        case 'hihat':
+          decay = Math.min(0.15, Math.max(0.05, decay));
+          sustain = 0.05;
+          release = decay * 0.3;
+          break;
+        case 'openhat':
+          decay = Math.min(0.8, Math.max(0.2, decay));
+          sustain = 0.2;
+          release = decay * 0.5;
+          break;
+        default:
+          // Keep default values
+          break;
       }
-
-      if (sound.reverb && sound.reverb > 0 && this.reverb) {
-        const reverbGain = this.audioContext.createGain();
-        reverbGain.gain.value = sound.reverb;
-        outputNode.connect(reverbGain);
-        reverbGain.connect(this.reverb);
-        this.reverb.connect(this.masterGain);
-      }
-
-      // Always connect dry signal
-      outputNode.connect(this.masterGain);
-
-      // Configure envelope
-      const envelope_config = sound.envelope || {
-        attack: 0.001,
-        decay: 0.1,
-        sustain: 0.3,
-        release: sound.decay
-      };
-
+      
+      // Apply envelope
       envelope.gain.setValueAtTime(0, now);
-      envelope.gain.linearRampToValueAtTime(1, now + envelope_config.attack);
+      envelope.gain.linearRampToValueAtTime(1, now + attack);
       envelope.gain.exponentialRampToValueAtTime(
-        Math.max(0.001, envelope_config.sustain),
-        now + envelope_config.attack + envelope_config.decay
+        Math.max(0.001, sustain),
+        now + attack + decay
       );
       envelope.gain.exponentialRampToValueAtTime(
         0.001,
-        now + envelope_config.attack + envelope_config.decay + envelope_config.release
+        now + attack + decay + release
       );
-
+      
       // Start sources
       oscillator.start(now);
       if (noiseSource) {
         noiseSource.start(now);
       }
-
-      // Stop sources after decay time
-      const stopTime = now + envelope_config.attack + envelope_config.decay + envelope_config.release + 0.1;
+      
+      // Stop sources after total time
+      const stopTime = now + attack + decay + release + 0.1;
       oscillator.stop(stopTime);
       if (noiseSource) {
         noiseSource.stop(stopTime);
       }
-
+      
     } catch (error) {
       console.error('Error playing drum sound:', error);
     }
