@@ -3,103 +3,181 @@
 @tailwind utilities;
 
 @layer base {
-  :root {
-    --background: 220 13% 5%;
-    --foreground: 210 40% 98%;
-    --primary: 142 76% 36%;
-    --primary-foreground: 355 7% 97%;
-    --secondary: 215 27% 17%;
-    --secondary-foreground: 210 40% 98%;
-    --muted: 215 27% 17%;
-    --muted-foreground: 217 10% 64%;
-    --accent: 215 27% 17%;
-    --accent-foreground: 210 40% 98%;
-    --border: 215 27% 17%;
-    --input: 215 27% 17%;
-    --ring: 142 76% 36%;
-  }
-
   body {
-    @apply bg-background text-foreground;
-    font-feature-settings: "rlig" 1, "calt" 1;
+    @apply bg-slate-900 text-white;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   }
 
-  html {
-    font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  * {
+    @apply selection:bg-cyan-400 selection:text-slate-900;
   }
 }
 
 @layer components {
-  .synth-knob {
-    @apply relative w-16 h-16 bg-synth-control rounded-full border-2 border-gray-600 cursor-pointer transition-all duration-200 hover:border-synth-accent;
+  /* Glass morphism effects */
+  .glass-panel {
+    @apply bg-slate-800/30 backdrop-blur-md border border-slate-700/50;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
   }
 
-  .synth-knob::before {
+  .glass-button {
+    @apply bg-slate-700/50 backdrop-blur-sm border border-slate-600/50;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Modern buttons */
+  .btn-primary {
+    @apply px-6 py-3 bg-gradient-to-r from-cyan-500 to-blue-500 text-white font-medium rounded-xl;
+    @apply hover:from-cyan-400 hover:to-blue-400 transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 bg-slate-700/50 backdrop-blur-sm border border-slate-600 text-slate-300;
+    @apply hover:bg-slate-600/50 hover:text-white transition-all duration-200 rounded-lg;
+    @apply focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-900;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-transport {
+    @apply p-3 bg-slate-700/50 backdrop-blur-sm border border-slate-600 text-slate-300 rounded-xl;
+    @apply hover:bg-slate-600/50 hover:text-white hover:border-slate-500 transition-all duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-slate-900;
+    @apply disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-transport-active {
+    @apply bg-cyan-500/20 border-cyan-400 text-cyan-400;
+    @apply hover:bg-cyan-500/30;
+  }
+
+  .btn-transport-record {
+    @apply bg-red-500/20 border-red-400 text-red-400;
+    @apply hover:bg-red-500/30;
+  }
+
+  /* Modern controls */
+  .knob-modern {
+    @apply relative w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-800 rounded-full;
+    @apply border-2 border-slate-500 cursor-pointer transition-all duration-200;
+    @apply hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-400/20;
+  }
+
+  .knob-modern::before {
     content: '';
-    @apply absolute top-1 left-1/2 w-1 h-6 bg-synth-accent rounded-full transform -translate-x-1/2;
+    @apply absolute top-2 left-1/2 w-1 h-6 bg-white rounded-full transform -translate-x-1/2;
     transform-origin: center bottom;
   }
 
-  .synth-button {
-    @apply px-4 py-2 bg-synth-control border border-gray-600 rounded-md text-white hover:bg-synth-accent hover:text-black transition-all duration-200 active:scale-95;
+  .slider-modern {
+    @apply appearance-none w-full h-2 bg-slate-700 rounded-lg outline-none;
+    @apply focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900;
   }
 
-  .synth-button.active {
-    @apply bg-synth-accent text-black border-synth-accent shadow-lg shadow-synth-accent/30;
+  .slider-modern::-webkit-slider-thumb {
+    @apply appearance-none w-5 h-5 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full cursor-pointer;
+    @apply hover:shadow-lg hover:shadow-cyan-400/50 transition-all duration-200;
   }
 
-  .synth-slider {
-    @apply appearance-none w-full h-2 bg-synth-control rounded-lg outline-none;
+  .slider-modern::-moz-range-thumb {
+    @apply w-5 h-5 bg-gradient-to-br from-cyan-400 to-blue-500 rounded-full cursor-pointer border-0;
   }
 
-  .synth-slider::-webkit-slider-thumb {
-    @apply appearance-none w-4 h-4 bg-synth-accent rounded-full cursor-pointer;
-  }
-
-  .synth-slider::-moz-range-thumb {
-    @apply w-4 h-4 bg-synth-accent rounded-full cursor-pointer border-0;
-  }
-
-  .drum-pad {
-    @apply w-16 h-16 bg-synth-control border-2 border-gray-600 rounded-lg cursor-pointer transition-all duration-100 hover:border-synth-accent active:bg-synth-accent active:scale-95;
-  }
-
-  .drum-pad.active {
-    @apply bg-synth-accent border-synth-accent shadow-lg shadow-synth-accent/50;
-  }
-
-  .waveform-bar {
-    @apply bg-synth-accent transition-all duration-75 ease-out;
-  }
-
+  /* Piano keys */
   .piano-key {
     @apply transition-all duration-75 cursor-pointer select-none;
   }
 
   .piano-key.white {
-    @apply bg-white border border-gray-300 hover:bg-gray-100 active:bg-gray-200;
+    @apply bg-gradient-to-b from-gray-100 to-white border border-gray-300 rounded-b-lg;
+    @apply hover:from-gray-50 hover:to-gray-100 active:from-gray-200 active:to-gray-300;
+    @apply shadow-md hover:shadow-lg;
   }
 
   .piano-key.black {
-    @apply bg-gray-900 hover:bg-gray-800 active:bg-gray-700;
+    @apply bg-gradient-to-b from-slate-800 to-slate-900 rounded-b-md;
+    @apply hover:from-slate-700 hover:to-slate-800 active:from-slate-600 active:to-slate-700;
+    @apply shadow-lg hover:shadow-xl;
   }
 
-  .cosmic-button {
-    background-color: #11171A;
-    color: white;
-    padding: 8px 16px;
-    border-radius: 6px;
-    font-size: 14px;
-    font-weight: 500;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    transition: background-color 0.2s ease;
+  /* Drum pads */
+  .drum-pad {
+    @apply w-16 h-16 bg-gradient-to-br from-slate-600 to-slate-800 border-2 border-slate-500;
+    @apply rounded-xl cursor-pointer transition-all duration-100;
+    @apply hover:border-cyan-400 hover:shadow-lg hover:shadow-cyan-400/20;
+    @apply active:scale-95 active:bg-gradient-to-br active:from-cyan-500 active:to-blue-500;
   }
 
-  .cosmic-button:hover {
-    background-color: #1a2326;
+  .drum-pad.active {
+    @apply bg-gradient-to-br from-cyan-500 to-blue-500 border-cyan-400;
+    @apply shadow-lg shadow-cyan-400/50;
+  }
+
+  /* Waveform visualization */
+  .waveform-bar {
+    @apply bg-gradient-to-t from-cyan-500 to-blue-400 transition-all duration-75 ease-out rounded-t-sm;
+  }
+
+  /* Audio level meters */
+  .level-meter {
+    @apply bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 rounded-full;
+    mask: linear-gradient(to right, #000 var(--level, 0%), transparent var(--level, 0%));
+    -webkit-mask: linear-gradient(to right, #000 var(--level, 0%), transparent var(--level, 0%));
+  }
+
+  /* Effect controls */
+  .effect-control {
+    @apply glass-panel p-4 rounded-lg space-y-3;
+  }
+
+  .effect-toggle {
+    @apply w-12 h-6 bg-slate-600 rounded-full relative cursor-pointer transition-colors duration-200;
+    @apply focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:ring-offset-2 focus:ring-offset-slate-900;
+  }
+
+  .effect-toggle.active {
+    @apply bg-gradient-to-r from-cyan-500 to-blue-500;
+  }
+
+  .effect-toggle::after {
+    content: '';
+    @apply absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform duration-200;
+  }
+
+  .effect-toggle.active::after {
+    @apply transform translate-x-6;
+  }
+
+  /* Sequencer grid */
+  .sequencer-step {
+    @apply w-8 h-8 bg-slate-700 border border-slate-600 rounded cursor-pointer;
+    @apply hover:bg-slate-600 transition-colors duration-100;
+  }
+
+  .sequencer-step.active {
+    @apply bg-gradient-to-br from-cyan-500 to-blue-500 border-cyan-400;
+  }
+
+  .sequencer-step.current {
+    @apply ring-2 ring-yellow-400 ring-offset-1 ring-offset-slate-900;
+  }
+
+  /* Modern input fields */
+  .input-modern {
+    @apply bg-slate-700/50 backdrop-blur-sm border border-slate-600 rounded-lg px-4 py-2;
+    @apply text-white placeholder-slate-400 outline-none;
+    @apply focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/20 transition-all duration-200;
+  }
+
+  /* Tooltip */
+  .tooltip {
+    @apply absolute z-50 px-3 py-2 bg-slate-800 text-white text-sm rounded-lg border border-slate-600;
+    @apply shadow-lg backdrop-blur-sm opacity-0 pointer-events-none transition-opacity duration-200;
+  }
+
+  .tooltip.visible {
+    @apply opacity-100;
   }
 }
 
@@ -108,53 +186,58 @@
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
   }
 
-  .glass-effect {
-    @apply backdrop-blur-sm bg-white/10 border border-white/20;
+  .glow-cyan {
+    box-shadow: 0 0 20px rgba(34, 211, 238, 0.4);
   }
 
-  .glow-accent {
-    box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(59, 130, 246, 0.4);
   }
 
-  .glow-warning {
-    box-shadow: 0 0 20px rgba(255, 107, 107, 0.3);
+  .glow-red {
+    box-shadow: 0 0 20px rgba(239, 68, 68, 0.4);
   }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
+  height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-synth-panel;
+  @apply bg-slate-800 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb {
-  @apply bg-synth-control rounded-full;
+  @apply bg-slate-600 rounded-full;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  @apply bg-synth-accent;
+  @apply bg-slate-500;
 }
 
 /* Animations */
 @keyframes pulse-recording {
   0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  50% { opacity: 0.3; }
 }
 
 .recording-indicator {
   animation: pulse-recording 1s ease-in-out infinite;
 }
 
-/* Audio visualization */
-.visualizer-bar {
-  @apply bg-gradient-to-t from-synth-accent to-synth-info;
-  animation: visualizer-pulse 0.1s ease-out;
-}
-
-@keyframes visualizer-pulse {
-  0% { transform: scaleY(0.5); }
-  100% { transform: scaleY(1); }
+/* Responsive design */
+@media (max-width: 768px) {
+  .glass-panel {
+    @apply mx-2;
+  }
+  
+  .piano-key {
+    @apply text-xs;
+  }
+  
+  .knob-modern {
+    @apply w-12 h-12;
+  }
 }
