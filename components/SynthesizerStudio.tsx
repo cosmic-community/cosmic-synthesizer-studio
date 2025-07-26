@@ -69,6 +69,7 @@ export default function SynthesizerStudio() {
   const [recordingState, setRecordingState] = useState<RecordingState>(defaultRecordingState);
   const [drumState, setDrumState] = useState<DrumSequencerState>(defaultDrumState);
   const [isInitialized, setIsInitialized] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [showPresets, setShowPresets] = useState(false);
   const [activeTab, setActiveTab] = useState<'synth' | 'drums' | 'effects' | 'recording'>('synth');
@@ -81,26 +82,57 @@ export default function SynthesizerStudio() {
 
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const initTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Initialize audio engine immediately
+  // Initialize audio engine with timeout
   useEffect(() => {
     const initializeAudio = async () => {
       try {
+        setIsInitializing(true);
+        setError(null);
+        
+        console.log('Starting audio engine initialization...');
         const audioEngine = new AudioEngine();
         audioEngineRef.current = audioEngine;
-        await audioEngine.init();
+        
+        // Set a timeout for initialization
+        const initPromise = audioEngine.init();
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          initTimeoutRef.current = setTimeout(() => {
+            reject(new Error('Audio initialization timed out. Please try again.'));
+          }, 10000); // 10 second timeout
+        });
+        
+        await Promise.race([initPromise, timeoutPromise]);
+        
+        // Clear timeout if successful
+        if (initTimeoutRef.current) {
+          clearTimeout(initTimeoutRef.current);
+          initTimeoutRef.current = null;
+        }
+        
+        console.log('Audio engine initialization completed');
         setIsInitialized(true);
         setError(null);
       } catch (err) {
         console.error('Audio initialization failed:', err);
         setError(err instanceof Error ? err.message : 'Audio initialization failed');
         setIsInitialized(false);
+      } finally {
+        setIsInitializing(false);
+        if (initTimeoutRef.current) {
+          clearTimeout(initTimeoutRef.current);
+          initTimeoutRef.current = null;
+        }
       }
     };
 
     initializeAudio();
 
     return () => {
+      if (initTimeoutRef.current) {
+        clearTimeout(initTimeoutRef.current);
+      }
       if (audioEngineRef.current) {
         audioEngineRef.current.destroy();
       }
@@ -206,7 +238,29 @@ export default function SynthesizerStudio() {
   };
 
   const retryAudioInit = async () => {
-    window.location.reload(); // Simple retry by reloading
+    setIsInitializing(true);
+    setError(null);
+    
+    // Clean up existing engine
+    if (audioEngineRef.current) {
+      audioEngineRef.current.destroy();
+      audioEngineRef.current = null;
+    }
+    
+    // Retry initialization
+    try {
+      const audioEngine = new AudioEngine();
+      audioEngineRef.current = audioEngine;
+      await audioEngine.init();
+      setIsInitialized(true);
+      setError(null);
+    } catch (err) {
+      console.error('Audio retry failed:', err);
+      setError(err instanceof Error ? err.message : 'Audio initialization failed');
+      setIsInitialized(false);
+    } finally {
+      setIsInitializing(false);
+    }
   };
 
   if (!isInitialized && error) {
@@ -215,27 +269,29 @@ export default function SynthesizerStudio() {
         <div className="text-center p-8 bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700">
           <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white mb-2">Audio Engine Error</h2>
-          <p className="text-red-400 mb-6">{error}</p>
+          <p className="text-red-400 mb-6 max-w-md mx-auto">{error}</p>
           
           <button 
             onClick={retryAudioInit}
-            className="btn-primary flex items-center gap-2 mx-auto"
+            className="btn-primary flex items-center gap-2 mx-auto mb-4"
+            disabled={isInitializing}
           >
-            <RefreshCw className="w-4 h-4" />
-            Retry
+            <RefreshCw className={`w-4 h-4 ${isInitializing ? 'animate-spin' : ''}`} />
+            {isInitializing ? 'Retrying...' : 'Retry'}
           </button>
           
-          <div className="text-sm text-slate-400 mt-4">
+          <div className="text-sm text-slate-400 space-y-1">
             <p>• Make sure your browser supports Web Audio API</p>
             <p>• Try using Chrome, Firefox, or Safari</p>
-            <p>• Click anywhere to enable audio</p>
+            <p>• Click anywhere on the page to enable audio</p>
+            <p>• Check that audio is not muted in your browser</p>
           </div>
         </div>
       </div>
     );
   }
 
-  if (!isInitialized) {
+  if (isInitializing) {
     return (
       <div className="max-w-4xl mx-auto p-6">
         <div className="flex items-center justify-center min-h-[400px]">
@@ -248,6 +304,9 @@ export default function SynthesizerStudio() {
             </div>
             <p className="text-cyan-400 mb-2">Initializing Audio Engine...</p>
             <p className="text-sm text-slate-400">Setting up Web Audio API</p>
+            <div className="mt-4 text-xs text-slate-500">
+              This may take a few seconds on first load
+            </div>
           </div>
         </div>
       </div>
@@ -266,6 +325,27 @@ export default function SynthesizerStudio() {
               <p className="text-sm text-slate-300">
                 Add COSMIC_BUCKET_SLUG to save presets and recordings.
               </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Audio context suspended warning */}
+      {isInitialized && audioEngineRef.current?.contextState === 'suspended' && (
+        <div className="bg-blue-900/20 border border-blue-600/30 rounded-xl p-4">
+          <div className="flex items-start gap-3">
+            <AlertTriangle className="w-5 h-5 text-blue-400 mt-0.5 flex-shrink-0" />
+            <div>
+              <h3 className="text-blue-400 font-medium mb-1">Audio needs activation</h3>
+              <p className="text-sm text-slate-300 mb-2">
+                Click anywhere or press a key to enable audio playback.
+              </p>
+              <button
+                onClick={handleUserInteraction}
+                className="btn-secondary text-sm"
+              >
+                Enable Audio
+              </button>
             </div>
           </div>
         </div>

@@ -68,19 +68,7 @@ export class AudioEngine {
 
       console.log('Audio context created, state:', this.audioContext.state);
 
-      // Handle suspended context (required for user interaction)
-      if (this.audioContext.state === 'suspended') {
-        console.log('Audio context is suspended, attempting to resume...');
-        try {
-          await this.audioContext.resume();
-          console.log('Audio context resumed, state:', this.audioContext.state);
-        } catch (resumeError) {
-          console.warn('Failed to resume audio context:', resumeError);
-          // Continue initialization - we'll try to resume later when user interacts
-        }
-      }
-
-      // Create basic audio nodes
+      // Create basic audio nodes first
       console.log('Creating audio nodes...');
       this.masterGain = this.audioContext.createGain();
       this.compressor = this.audioContext.createDynamicsCompressor();
@@ -117,11 +105,23 @@ export class AudioEngine {
       // Set initial master volume
       this.masterGain.gain.value = 0.7;
 
-      // Initialize effects (non-critical)
+      // Initialize effects (non-critical, don't let this fail initialization)
       console.log('Initializing effects...');
-      await this.initializeEffects();
+      try {
+        await this.initializeEffects();
+      } catch (effectsError) {
+        console.warn('Effects initialization failed, continuing without effects:', effectsError);
+      }
 
+      // Mark as initialized before trying to resume context
       this.isInitialized = true;
+
+      // Handle suspended context (required for user interaction)
+      if (this.audioContext.state === 'suspended') {
+        console.log('Audio context is suspended, will resume on user interaction');
+        // Don't throw here - this is expected behavior
+      }
+
       console.log('Audio engine initialization completed successfully');
     } catch (error) {
       console.error('Audio engine initialization failed:', error);
