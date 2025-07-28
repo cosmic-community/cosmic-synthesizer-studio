@@ -10,6 +10,8 @@ export interface DrumPatternData {
   id: string;
   title: string;
   slug: string;
+  created_at?: string;
+  modified_at?: string;
   metadata: {
     pattern_name: string;
     description: string;
@@ -34,12 +36,12 @@ export async function getDrumPatterns(): Promise<DrumPatternData[]> {
   try {
     const { objects } = await cosmic.objects
       .find({ type: 'drum-patterns' })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .props(['id', 'title', 'slug', 'metadata', 'created_at', 'modified_at'])
       .depth(1);
     
     return objects as DrumPatternData[];
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && (error as any).status === 404) {
       return [];
     }
     throw error;
@@ -50,12 +52,12 @@ export async function getDrumPatternBySlug(slug: string): Promise<DrumPatternDat
   try {
     const { object } = await cosmic.objects
       .findOne({ type: 'drum-patterns', slug })
-      .props(['id', 'title', 'slug', 'metadata'])
+      .props(['id', 'title', 'slug', 'metadata', 'created_at', 'modified_at'])
       .depth(1);
     
     return object as DrumPatternData;
-  } catch (error) {
-    if (error.status === 404) {
+  } catch (error: unknown) {
+    if (error && typeof error === 'object' && 'status' in error && (error as any).status === 404) {
       return null;
     }
     throw error;

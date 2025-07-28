@@ -120,7 +120,9 @@ export default function DrumPatternLibrary({
         comparison = (a.metadata.style?.value || '').localeCompare(b.metadata.style?.value || '');
         break;
       case 'date':
-        comparison = new Date(a.created_at || 0).getTime() - new Date(b.created_at || 0).getTime();
+        const aDate = a.created_at ? new Date(a.created_at).getTime() : 0;
+        const bDate = b.created_at ? new Date(b.created_at).getTime() : 0;
+        comparison = aDate - bDate;
         break;
       default:
         comparison = 0;
