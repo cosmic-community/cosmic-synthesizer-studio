@@ -14,11 +14,20 @@ export class AudioEngine {
   private chorus: DelayNode | null = null;
   private chorusLFO: OscillatorNode | null = null;
   private chorusGain: GainNode | null = null;
-  private activeNotes: Map<string, { oscillators: OscillatorNode[]; envelope: GainNode; filter?: BiquadFilterNode; effectsChain?: AudioNode[] }> = new Map();
+  private activeNotes: Map<string, { 
+    oscillators: OscillatorNode[]; 
+    envelope: GainNode; 
+    filter?: BiquadFilterNode; 
+    effectsChain?: AudioNode[];
+    startTime: number;
+    velocity: number;
+  }> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private isInitialized: boolean = false;
   private initializationPromise: Promise<void> | null = null;
+  private maxPolyphony: number = 32; // Maximum simultaneous notes
+  private voiceManager: Map<string, number> = new Map(); // Track voice usage
 
   constructor() {
     // Don't initialize immediately - let the init method handle initialization
@@ -57,9 +66,12 @@ export class AudioEngine {
         throw new Error('Web Audio API is not supported in this browser. Please use a modern browser like Chrome, Firefox, or Safari.');
       }
 
-      // Create audio context
+      // Create audio context with optimal settings
       console.log('Creating audio context...');
-      this.audioContext = new AudioContextClass();
+      this.audioContext = new AudioContextClass({
+        latencyHint: 'interactive',
+        sampleRate: 44100
+      });
 
       // Check if context was created successfully
       if (!this.audioContext) {
@@ -86,16 +98,18 @@ export class AudioEngine {
       this.filter.connect(this.analyser);
       this.analyser.connect(this.audioContext.destination);
 
-      // Configure analyser
+      // Configure analyser for better visualization
       this.analyser.fftSize = 2048;
       this.analyser.smoothingTimeConstant = 0.8;
+      this.analyser.minDecibels = -90;
+      this.analyser.maxDecibels = -10;
 
-      // Configure compressor
-      this.compressor.threshold.value = -24;
+      // Configure compressor for polyphonic playback
+      this.compressor.threshold.value = -18;
       this.compressor.knee.value = 30;
-      this.compressor.ratio.value = 12;
-      this.compressor.attack.value = 0.003;
-      this.compressor.release.value = 0.25;
+      this.compressor.ratio.value = 8;
+      this.compressor.attack.value = 0.001;
+      this.compressor.release.value = 0.1;
 
       // Configure filter
       this.filter.type = 'lowpass';
@@ -137,7 +151,7 @@ export class AudioEngine {
       console.log('Creating reverb...');
       // Create reverb impulse response
       this.reverb = this.audioContext.createConvolver();
-      const impulseLength = Math.min(this.audioContext.sampleRate * 2, 88200); // Limit size
+      const impulseLength = Math.min(this.audioContext.sampleRate * 2, 88200);
       const impulse = this.audioContext.createBuffer(2, impulseLength, this.audioContext.sampleRate);
       
       for (let channel = 0; channel < 2; channel++) {
@@ -233,7 +247,8 @@ export class AudioEngine {
     }
   }
 
-  public playNote(frequency: number, synthState: SynthState): void {
+  // Enhanced polyphonic note playing with voice management
+  public playNote(frequency: number, synthState: SynthState, velocity: number = 0.8): void {
     if (!this.isInitialized || !this.audioContext || !this.masterGain) {
       console.warn('Audio engine not initialized, cannot play note');
       return;
@@ -245,54 +260,136 @@ export class AudioEngine {
       return;
     }
 
-    const noteKey = frequency.toString();
+    const noteKey = frequency.toFixed(2); // Use frequency with precision as key
     
-    // Stop existing note if playing
+    // Voice management - limit polyphony
+    if (this.activeNotes.size >= this.maxPolyphony) {
+      this.releaseOldestNote();
+    }
+
+    // Stop existing note if playing same frequency
     if (this.activeNotes.has(noteKey)) {
       this.stopNote(frequency);
     }
 
     try {
-      // Create oscillator
-      const oscillator = this.audioContext.createOscillator();
-      oscillator.type = synthState.oscillatorType;
-      oscillator.frequency.value = frequency;
+      const now = this.audioContext.currentTime;
+
+      // Create multiple oscillators for richer sound
+      const oscillators: OscillatorNode[] = [];
+      const mixer = this.audioContext.createGain();
+
+      // Main oscillator
+      const mainOscillator = this.audioContext.createOscillator();
+      mainOscillator.type = synthState.oscillatorType;
+      mainOscillator.frequency.value = frequency;
+      
+      const mainGain = this.audioContext.createGain();
+      mainGain.gain.value = 0.7;
+      mainOscillator.connect(mainGain);
+      mainGain.connect(mixer);
+      oscillators.push(mainOscillator);
+
+      // Sub oscillator for warmth
+      const subOscillator = this.audioContext.createOscillator();
+      subOscillator.type = 'sine';
+      subOscillator.frequency.value = frequency / 2;
+      
+      const subGain = this.audioContext.createGain();
+      subGain.gain.value = 0.2;
+      subOscillator.connect(subGain);
+      subGain.connect(mixer);
+      oscillators.push(subOscillator);
+
+      // Slight detune for thickness
+      if (synthState.oscillatorType !== 'sine') {
+        const detuneOscillator = this.audioContext.createOscillator();
+        detuneOscillator.type = synthState.oscillatorType;
+        detuneOscillator.frequency.value = frequency * 1.007; // Slight detune
+        
+        const detuneGain = this.audioContext.createGain();
+        detuneGain.gain.value = 0.3;
+        detuneOscillator.connect(detuneGain);
+        detuneGain.connect(mixer);
+        oscillators.push(detuneOscillator);
+      }
+
+      // Create per-note filter for better polyphonic control
+      const noteFilter = this.audioContext.createBiquadFilter();
+      noteFilter.type = 'lowpass';
+      noteFilter.frequency.value = synthState.filterCutoff;
+      noteFilter.Q.value = synthState.filterResonance;
 
       // Create envelope
       const envelope = this.audioContext.createGain();
       envelope.gain.value = 0;
 
-      // Connect audio chain with effects
-      oscillator.connect(envelope);
+      // Connect audio chain
+      mixer.connect(noteFilter);
+      noteFilter.connect(envelope);
+      
+      // Create effects chain for this note
       const effectsChain = this.createEffectsChain(synthState);
       this.connectToEffectsChain(envelope, effectsChain);
 
-      // Apply ADSR envelope
-      const now = this.audioContext.currentTime;
+      // Apply ADSR envelope with velocity sensitivity
+      const noteVolume = synthState.volume * velocity;
       envelope.gain.setValueAtTime(0, now);
-      envelope.gain.linearRampToValueAtTime(synthState.volume, now + synthState.attack);
+      envelope.gain.linearRampToValueAtTime(noteVolume, now + synthState.attack);
       envelope.gain.exponentialRampToValueAtTime(
-        Math.max(0.001, synthState.volume * synthState.sustain),
+        Math.max(0.001, noteVolume * synthState.sustain),
         now + synthState.attack + synthState.decay
       );
 
-      // Update filter
-      if (this.filter) {
-        this.filter.frequency.value = synthState.filterCutoff;
-        this.filter.Q.value = synthState.filterResonance;
-      }
+      // Apply filter envelope
+      const filterEnvelope = synthState.filterCutoff * 0.5;
+      noteFilter.frequency.setValueAtTime(synthState.filterCutoff, now);
+      noteFilter.frequency.linearRampToValueAtTime(
+        Math.min(20000, synthState.filterCutoff + filterEnvelope),
+        now + synthState.attack
+      );
+      noteFilter.frequency.exponentialRampToValueAtTime(
+        Math.max(20, synthState.filterCutoff + filterEnvelope * synthState.sustain),
+        now + synthState.attack + synthState.decay
+      );
 
-      // Start oscillator
-      oscillator.start();
+      // Start all oscillators
+      oscillators.forEach(osc => osc.start(now));
 
-      // Store active note
+      // Store active note with metadata
       this.activeNotes.set(noteKey, { 
-        oscillators: [oscillator], 
+        oscillators, 
         envelope,
-        effectsChain
+        filter: noteFilter,
+        effectsChain,
+        startTime: now,
+        velocity
       });
+
+      // Track voice usage
+      this.voiceManager.set(noteKey, now);
+
     } catch (error) {
       console.error('Error playing note:', error);
+    }
+  }
+
+  private releaseOldestNote(): void {
+    if (this.voiceManager.size === 0) return;
+
+    let oldestNote = '';
+    let oldestTime = Infinity;
+
+    this.voiceManager.forEach((time, noteKey) => {
+      if (time < oldestTime) {
+        oldestTime = time;
+        oldestNote = noteKey;
+      }
+    });
+
+    if (oldestNote) {
+      const frequency = parseFloat(oldestNote);
+      this.stopNote(frequency);
     }
   }
 
@@ -304,7 +401,6 @@ export class AudioEngine {
     try {
       // Distortion first
       if (synthState.effects.distortion?.active && this.distortion) {
-        // Update distortion parameters
         this.updateDistortionCurve(
           synthState.effects.distortion.type || 'soft',
           synthState.effects.distortion.amount || 30
@@ -314,7 +410,6 @@ export class AudioEngine {
 
       // Chorus
       if (synthState.effects.chorus?.active && this.chorus && this.chorusLFO && this.chorusGain) {
-        // Update chorus parameters
         this.chorusLFO.frequency.value = synthState.effects.chorus.rate || 1.0;
         this.chorusGain.gain.value = (synthState.effects.chorus.depth || 0.5) * 0.01;
         chain.push(this.chorus);
@@ -322,7 +417,6 @@ export class AudioEngine {
 
       // Delay
       if (synthState.effects.delay?.active && this.delay && this.delayFeedback) {
-        // Update delay parameters
         this.delay.delayTime.value = synthState.effects.delay.time || 0.25;
         this.delayFeedback.gain.value = synthState.effects.delay.feedback || 0.3;
         chain.push(this.delay);
@@ -373,7 +467,7 @@ export class AudioEngine {
     }
   }
 
-  public playPianoNote(frequency: number, pianoSound: PianoSoundConfig): void {
+  public playPianoNote(frequency: number, pianoSound: PianoSoundConfig, velocity: number = 0.8): void {
     if (!this.isInitialized || !this.audioContext || !this.masterGain) {
       console.warn('Audio engine not initialized, cannot play piano note');
       return;
@@ -385,8 +479,13 @@ export class AudioEngine {
       return;
     }
 
-    const noteKey = frequency.toString();
+    const noteKey = frequency.toFixed(2);
     
+    // Voice management
+    if (this.activeNotes.size >= this.maxPolyphony) {
+      this.releaseOldestNote();
+    }
+
     // Stop existing note if playing
     if (this.activeNotes.has(noteKey)) {
       this.stopNote(frequency);
@@ -410,7 +509,7 @@ export class AudioEngine {
           harmonicOsc.frequency.value = frequency * harmonic.frequency;
           
           const harmonicGain = this.audioContext.createGain();
-          harmonicGain.gain.value = harmonic.gain;
+          harmonicGain.gain.value = harmonic.gain * velocity;
           
           harmonicOsc.connect(harmonicGain);
           oscillators.push(harmonicOsc);
@@ -427,9 +526,9 @@ export class AudioEngine {
       const envelope = this.audioContext.createGain();
       envelope.gain.value = 0;
 
-      // Create volume control
+      // Create volume control with velocity sensitivity
       const volumeGain = this.audioContext.createGain();
-      volumeGain.gain.value = pianoSound.baseVolume;
+      volumeGain.gain.value = pianoSound.baseVolume * velocity;
 
       // Connect the main audio chain
       const mixer = this.audioContext.createGain();
@@ -440,7 +539,7 @@ export class AudioEngine {
           // Main oscillator
           osc.connect(mixer);
         } else {
-          // Harmonic oscillators (already have their gain nodes)
+          // Harmonic oscillators already have their gain nodes
           const harmonicNodes = this.getConnectedNodes(osc);
           if (harmonicNodes.length > 0) {
             harmonicNodes[harmonicNodes.length - 1].connect(mixer);
@@ -455,17 +554,18 @@ export class AudioEngine {
       // Apply piano-specific effects
       this.connectPianoEffects(volumeGain, pianoSound);
 
-      // Apply ADSR envelope
+      // Apply ADSR envelope with velocity curve
+      const velocityScaled = this.applyVelocityCurve(velocity, pianoSound.velocity);
       envelope.gain.setValueAtTime(0, now);
-      envelope.gain.linearRampToValueAtTime(1, now + pianoSound.envelope.attack);
+      envelope.gain.linearRampToValueAtTime(velocityScaled, now + pianoSound.envelope.attack);
       envelope.gain.exponentialRampToValueAtTime(
-        Math.max(0.001, pianoSound.envelope.sustain),
+        Math.max(0.001, velocityScaled * pianoSound.envelope.sustain),
         now + pianoSound.envelope.attack + pianoSound.envelope.decay
       );
 
       // Apply filter envelope
       if (pianoSound.filter.envelopeAmount > 0) {
-        const filterEnvelope = pianoSound.filter.envelopeAmount * 2000; // Scale envelope amount
+        const filterEnvelope = pianoSound.filter.envelopeAmount * 2000;
         noteFilter.frequency.setValueAtTime(pianoSound.filter.frequency, now);
         noteFilter.frequency.linearRampToValueAtTime(
           pianoSound.filter.frequency + filterEnvelope,
@@ -481,14 +581,36 @@ export class AudioEngine {
       oscillators.forEach(osc => osc.start(now));
 
       // Store active note
-      this.activeNotes.set(noteKey, { oscillators, envelope, filter: noteFilter });
+      this.activeNotes.set(noteKey, { 
+        oscillators, 
+        envelope, 
+        filter: noteFilter,
+        startTime: now,
+        velocity
+      });
+
+      this.voiceManager.set(noteKey, now);
     } catch (error) {
       console.error('Error playing piano note:', error);
     }
   }
 
+  private applyVelocityCurve(velocity: number, velocityConfig: { curve: string; sensitivity: number }): number {
+    const scaledVelocity = velocity * velocityConfig.sensitivity;
+    
+    switch (velocityConfig.curve) {
+      case 'linear':
+        return scaledVelocity;
+      case 'exponential':
+        return Math.pow(scaledVelocity, 2);
+      case 'logarithmic':
+        return Math.log(scaledVelocity * 9 + 1) / Math.log(10);
+      default:
+        return scaledVelocity;
+    }
+  }
+
   private getConnectedNodes(node: AudioNode): AudioNode[] {
-    // This is a simplified approach - in practice, you might want to track connections more carefully
     return [node];
   }
 
@@ -506,7 +628,7 @@ export class AudioEngine {
 
         lowShelf.type = 'lowshelf';
         lowShelf.frequency.value = 250;
-        lowShelf.gain.value = (pianoSound.effects.eq.low - 1) * 12; // Convert to dB
+        lowShelf.gain.value = (pianoSound.effects.eq.low - 1) * 12;
 
         midPeak.type = 'peaking';
         midPeak.frequency.value = 1000;
@@ -542,9 +664,6 @@ export class AudioEngine {
         currentNode.connect(chorusGain);
         chorusGain.connect(this.chorus);
         this.chorus.connect(this.masterGain);
-        
-        // Update chorus parameters
-        // Note: This is simplified - in practice you'd want separate chorus instances
       }
 
       // Apply reverb if specified
@@ -560,7 +679,6 @@ export class AudioEngine {
       currentNode.connect(this.masterGain);
     } catch (error) {
       console.error('Error connecting piano effects:', error);
-      // Fallback to direct connection
       source.connect(this.masterGain);
     }
   }
@@ -568,7 +686,7 @@ export class AudioEngine {
   public stopNote(frequency: number): void {
     if (!this.isInitialized || !this.audioContext) return;
 
-    const noteKey = frequency.toString();
+    const noteKey = frequency.toFixed(2);
     const activeNote = this.activeNotes.get(noteKey);
 
     if (activeNote) {
@@ -576,9 +694,8 @@ export class AudioEngine {
         const { oscillators, envelope } = activeNote;
         const now = this.audioContext.currentTime;
 
-        // Get the piano sound from the active note (if available)
-        // For now, we'll use a default release time, but this could be improved
-        const releaseTime = 0.5; // Default release time
+        // Default release time
+        const releaseTime = 0.5;
 
         // Apply release
         envelope.gain.cancelScheduledValues(now);
@@ -588,7 +705,11 @@ export class AudioEngine {
         // Stop all oscillators after release
         setTimeout(() => {
           try {
-            oscillators.forEach(osc => osc.stop());
+            oscillators.forEach(osc => {
+              if (osc.context.state !== 'closed') {
+                osc.stop();
+              }
+            });
           } catch (e) {
             // Oscillators might already be stopped
           }
@@ -596,11 +717,22 @@ export class AudioEngine {
 
         // Clean up
         this.activeNotes.delete(noteKey);
+        this.voiceManager.delete(noteKey);
       } catch (error) {
         console.error('Error stopping note:', error);
         this.activeNotes.delete(noteKey);
+        this.voiceManager.delete(noteKey);
       }
     }
+  }
+
+  // Stop all active notes
+  public stopAllNotes(): void {
+    const activeNoteKeys = Array.from(this.activeNotes.keys());
+    activeNoteKeys.forEach(noteKey => {
+      const frequency = parseFloat(noteKey);
+      this.stopNote(frequency);
+    });
   }
 
   public playDrumSound(sound: DrumSoundConfig): void {
@@ -657,7 +789,7 @@ export class AudioEngine {
       
       if (['snare', 'hihat', 'openhat', 'clap'].includes(sound.type)) {
         try {
-          const bufferSize = this.audioContext.sampleRate * 0.1; // 100ms of noise
+          const bufferSize = this.audioContext.sampleRate * 0.1;
           const noiseBuffer = this.audioContext.createBuffer(1, bufferSize, this.audioContext.sampleRate);
           const output = noiseBuffer.getChannelData(0);
           
@@ -733,7 +865,6 @@ export class AudioEngine {
           release = decay * 0.5;
           break;
         default:
-          // Keep default values
           break;
       }
       
@@ -822,16 +953,21 @@ export class AudioEngine {
     }
   }
 
+  public getActiveNoteCount(): number {
+    return this.activeNotes.size;
+  }
+
+  public getMaxPolyphony(): number {
+    return this.maxPolyphony;
+  }
+
+  public setMaxPolyphony(polyphony: number): void {
+    this.maxPolyphony = Math.max(1, Math.min(64, polyphony));
+  }
+
   private cleanup(): void {
     // Stop all active notes
-    this.activeNotes.forEach((note) => {
-      try {
-        note.oscillators.forEach(osc => osc.stop());
-      } catch (error) {
-        // Ignore errors when stopping oscillators
-      }
-    });
-    this.activeNotes.clear();
+    this.stopAllNotes();
     
     // Stop and clean up LFOs
     if (this.chorusLFO) {
@@ -862,6 +998,8 @@ export class AudioEngine {
     this.chorusGain = null;
     this.mediaRecorder = null;
     
+    this.activeNotes.clear();
+    this.voiceManager.clear();
     this.isInitialized = false;
   }
 
