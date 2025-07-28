@@ -8,24 +8,40 @@ export interface ReverbEffect {
   active: boolean;
   amount: number;
   roomSize: number;
+  damping: number;
+  predelay: number;
+  width: number;
+  type: string;
 }
 
 export interface DelayEffect {
   active: boolean;
   time: number;
   feedback: number;
+  highCut: number;
+  wetLevel: number;
+  stereo: boolean;
 }
 
 export interface DistortionEffect {
   active: boolean;
   amount: number;
   type: 'soft' | 'hard' | 'tube' | 'fuzz' | 'bitcrush';
+  drive: number;
+  tone: number;
+  level: number;
+  bias: number;
+  oversampling: string;
 }
 
 export interface ChorusEffect {
   active: boolean;
   rate: number;
   depth: number;
+  feedback: number;
+  mix: number;
+  voices: number;
+  waveform: string;
 }
 
 export interface PhaserEffect {
@@ -44,6 +60,10 @@ export interface CompressorEffect {
   active: boolean;
   threshold: number;
   ratio: number;
+  attack: number;
+  release: number;
+  knee: number;
+  makeup: number;
 }
 
 export interface EQEffect {
@@ -51,6 +71,29 @@ export interface EQEffect {
   low: number;
   mid: number;
   high: number;
+  lowMid: number;
+  highMid: number;
+  lowFreq: number;
+  lowMidFreq: number;
+  highMidFreq: number;
+  highFreq: number;
+}
+
+export interface FilterEffect {
+  active: boolean;
+  cutoff: number;
+  resonance: number;
+  type: string;
+  drive: number;
+  keyFollow: number;
+}
+
+export interface StereoEffect {
+  active: boolean;
+  width: number;
+  bass: number;
+  delay: number;
+  phase: number;
 }
 
 export interface EffectsState {
@@ -62,6 +105,8 @@ export interface EffectsState {
   flanger: FlangerEffect;
   compressor: CompressorEffect;
   eq: EQEffect;
+  filter: FilterEffect;
+  stereo: StereoEffect;
 }
 
 // Main synthesizer state
