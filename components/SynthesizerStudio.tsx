@@ -31,14 +31,81 @@ const defaultSynthState: SynthState = {
   release: 0.5,
   volume: 0.5,
   effects: {
-    reverb: { active: false, amount: 0.3, roomSize: 0.5 },
-    delay: { active: false, time: 0.25, feedback: 0.3 },
-    distortion: { active: false, amount: 50, type: 'soft' },
-    chorus: { active: false, rate: 1, depth: 0.5 },
+    reverb: { 
+      active: false, 
+      amount: 0.3, 
+      roomSize: 0.5, 
+      damping: 0.5, 
+      predelay: 0, 
+      width: 1.0, 
+      type: 'hall' 
+    },
+    delay: { 
+      active: false, 
+      time: 0.25, 
+      feedback: 0.3, 
+      highCut: 8000, 
+      wetLevel: 0.3, 
+      stereo: false 
+    },
+    distortion: { 
+      active: false, 
+      amount: 50, 
+      type: 'soft', 
+      drive: 30, 
+      tone: 0.7, 
+      level: 0.8, 
+      bias: 0, 
+      oversampling: '2x' 
+    },
+    chorus: { 
+      active: false, 
+      rate: 1, 
+      depth: 0.5, 
+      feedback: 0.2, 
+      mix: 0.3, 
+      voices: 3, 
+      waveform: 'sine' 
+    },
     phaser: { active: false, rate: 0.5, depth: 0.7 },
     flanger: { active: false, rate: 0.3, feedback: 0.6 },
-    compressor: { active: false, threshold: -20, ratio: 4 },
-    eq: { active: false, low: 0, mid: 0, high: 0 }
+    compressor: { 
+      active: false, 
+      threshold: -20, 
+      ratio: 4, 
+      attack: 5, 
+      release: 100, 
+      knee: 2, 
+      makeup: 0 
+    },
+    eq: { 
+      active: false, 
+      low: 0, 
+      mid: 0, 
+      high: 0, 
+      lowMid: 0, 
+      highMid: 0, 
+      lowFreq: 100, 
+      lowMidFreq: 500, 
+      highMidFreq: 2000, 
+      highFreq: 10000 
+    },
+    filter: { 
+      active: false, 
+      cutoff: 1000, 
+      resonance: 0.3, 
+      type: 'lowpass', 
+      drive: 0, 
+      keyFollow: 0.5, 
+      slope: '24db' 
+    },
+    stereo: { 
+      active: false, 
+      width: 1.0, 
+      bass: 0.8, 
+      delay: 0.5, 
+      phase: 0 
+    }
   }
 };
 

@@ -86,6 +86,7 @@ export interface FilterEffect {
   type: string;
   drive: number;
   keyFollow: number;
+  slope: string;
 }
 
 export interface StereoEffect {

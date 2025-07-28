@@ -133,10 +133,10 @@ export class ConvolutionReverb implements AdvancedEffectProcessor {
         // Generate complex reflection pattern
         let sample = 0;
         for (let harmonic = 1; harmonic <= 8; harmonic++) {
-          const harmonicFrequency = 440 * harmonic;
+          const baseFrequency = 440 * harmonic;
           const phase = Math.random() * Math.PI * 2;
           const amplitude = decay / harmonic;
-          sample += amplitude * Math.sin(2 * Math.PI * harmonicFrequency * t + phase);
+          sample += amplitude * Math.sin(2 * Math.PI * baseFrequency * t + phase);
         }
         
         // Add diffusion
@@ -144,7 +144,7 @@ export class ConvolutionReverb implements AdvancedEffectProcessor {
         sample = sample * (1 - room.diffusion) + diffusion * room.diffusion;
         
         // Apply damping (frequency-dependent decay)
-        const dampingFactor = 1 - (damping * t * (harmonicFrequency / 1000));
+        const dampingFactor = 1 - (damping * t * (baseFrequency / 1000));
         sample *= Math.max(0.1, dampingFactor);
         
         channelData[i] = sample * 0.3;
