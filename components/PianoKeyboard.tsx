@@ -11,6 +11,11 @@ interface PianoKeyboardProps {
   keySize?: 'small' | 'medium' | 'large';
 }
 
+// Extended Touch interface to include force property
+interface ExtendedTouch extends Touch {
+  force?: number;
+}
+
 // Extended piano key frequencies (3 octaves)
 const keyFrequencies = {
   // Octave 3
@@ -353,9 +358,10 @@ export default function PianoKeyboard({
   // Touch support for mobile devices
   const handleTouchStart = useCallback((event: React.TouchEvent, keyName: string) => {
     event.preventDefault();
-    const touch = event.touches[0];
+    const touch = event.touches[0] as ExtendedTouch | undefined;
     if (touch) {
-      const force = touch.force || 0.5; // Use force if available, otherwise default
+      // Check if force property exists and use it, otherwise default to 0.5
+      const force = (touch.force !== undefined) ? touch.force : 0.5;
       const touchVelocity = Math.max(0.1, Math.min(1.0, force * velocity));
       handleKeyDown(keyName, touchVelocity);
     }
