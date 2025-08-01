@@ -1,4 +1,8 @@
 import './globals.css';
+import '@/styles/glass-morphism.css';
+import '@/styles/modern-theme.css';
+import '@/styles/responsive.css';
+import '@/styles/navigation.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 
@@ -46,12 +50,15 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
         <meta name="theme-color" content="#00ff88" />
       </head>
-      <body className={`${inter.className} bg-synth-bg text-white min-h-screen`}>
+      <body className={`${inter.className} bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white min-h-screen antialiased`}>
+        <a href="#main-content" className="skip-to-content">
+          Skip to main content
+        </a>
         <div className="min-h-screen flex flex-col">
-          <main className="flex-1">
+          <main id="main-content" className="flex-1">
             {children}
           </main>
-          <footer className="bg-synth-panel border-t border-gray-800 py-6">
+          <footer className="glass-panel border-t border-white/10 py-6">
             <div className="container mx-auto px-4 text-center">
               <p className="text-gray-400 mb-4">
                 Professional music production powered by Web Audio API
