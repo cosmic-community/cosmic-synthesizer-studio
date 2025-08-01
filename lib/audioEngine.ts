@@ -744,7 +744,7 @@ export class AudioEngine {
         const currentGain = envelope.gain.value;
         const releaseTime = Math.max(0.05, Math.min(1.0, currentGain * 2)); // Adaptive release
 
-        // Apply enhanced release
+        // Apply enhanced release with smooth fade
         envelope.gain.cancelScheduledValues(now);
         envelope.gain.setValueAtTime(envelope.gain.value, now);
         envelope.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
@@ -766,11 +766,12 @@ export class AudioEngine {
           }
         }, releaseTime * 1000 + 50); // Small buffer to ensure envelope completes
 
-        // Clean up immediately
+        // Clean up immediately from tracking
         this.activeNotes.delete(noteKey);
         this.voiceManager.delete(noteKey);
       } catch (error) {
         console.error('Error stopping note:', error);
+        // Always clean up tracking even if stopping fails
         this.activeNotes.delete(noteKey);
         this.voiceManager.delete(noteKey);
       }
