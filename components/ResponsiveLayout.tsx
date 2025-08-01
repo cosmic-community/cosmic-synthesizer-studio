@@ -102,23 +102,26 @@ export default function ResponsiveLayout({
 
         {/* Status Bar */}
         {showStatusBar && (
-          <StatusBar
-            isConnected={true}
-            cpuUsage={45}
-            memoryUsage={32}
-            audioLatency={12}
-            sampleRate={44100}
-            bufferSize={256}
-            activeVoices={8}
-            masterLevel={masterVolume}
-            inputLevel={0.1}
-            projectName="Untitled Project"
-            isDirty={false}
+          <div
             className="fixed bottom-0 left-0 right-0 lg:left-64"
             style={{
               left: isDesktop ? (sidebarCollapsed ? '64px' : '256px') : '0'
             }}
-          />
+          >
+            <StatusBar
+              isConnected={true}
+              cpuUsage={45}
+              memoryUsage={32}
+              audioLatency={12}
+              sampleRate={44100}
+              bufferSize={256}
+              activeVoices={8}
+              masterLevel={masterVolume}
+              inputLevel={0.1}
+              projectName="Untitled Project"
+              isDirty={false}
+            />
+          </div>
         )}
       </div>
 

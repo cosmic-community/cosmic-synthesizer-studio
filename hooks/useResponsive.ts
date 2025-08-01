@@ -81,7 +81,24 @@ export function useResponsive(): ResponsiveState {
     let resizeObserver: ResizeObserver | null = null;
     
     if (typeof ResizeObserver !== 'undefined') {
-      resizeObserver = new ResizeObserver(handleResize);
+      resizeObserver = new ResizeObserver((entries) => {
+        for (const entry of entries) {
+          // Use contentRect which has width and height properties
+          const { width, height } = entry.contentRect;
+          
+          setState({
+            width,
+            height,
+            breakpoint: getBreakpoint(width),
+            isMobile: width < breakpoints.md,
+            isTablet: width >= breakpoints.md && width < breakpoints.lg,
+            isDesktop: width >= breakpoints.lg,
+            isLandscape: width > height,
+            isPortrait: height > width,
+            devicePixelRatio: window.devicePixelRatio || 1
+          });
+        }
+      });
       resizeObserver.observe(document.documentElement);
     } else {
       window.addEventListener('resize', handleResize);
@@ -244,7 +261,8 @@ export function useContainerQuery(containerRef: React.RefObject<HTMLElement>, qu
     
     const resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
-        const { width, height } = entry.borderBoxSize?.[0] || entry.contentRect;
+        // Use contentRect for consistent width and height access
+        const { width, height } = entry.contentRect;
         
         // Simple width-based container query parsing
         // You could extend this to support more complex queries
