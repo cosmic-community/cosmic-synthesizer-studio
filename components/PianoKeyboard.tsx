@@ -9,10 +9,24 @@ interface PianoKeyboardProps {
   disabled?: boolean;
   showLabels?: boolean;
   keySize?: 'small' | 'medium' | 'large';
+  maxPolyphony?: number;
 }
 
-// Extended piano key frequencies (3 octaves)
+// Extended piano key frequencies (4 octaves for better range)
 const keyFrequencies = {
+  // Octave 2
+  'C2': 65.41,
+  'C#2': 69.30,
+  'D2': 73.42,
+  'D#2': 77.78,
+  'E2': 82.41,
+  'F2': 87.31,
+  'F#2': 92.50,
+  'G2': 98.00,
+  'G#2': 103.83,
+  'A2': 110.00,
+  'A#2': 116.54,
+  'B2': 123.47,
   // Octave 3
   'C3': 130.81,
   'C#3': 138.59,
@@ -61,9 +75,9 @@ const keyFrequencies = {
   'F6': 1396.91
 };
 
-// Enhanced keyboard mapping with multiple rows
+// Enhanced keyboard mapping with multiple layers for better polyphony
 const keyboardMapping: Record<string, string> = {
-  // Bottom row - White keys (C4-F5)
+  // Main row - White keys (C4-F5)
   'a': 'C4',
   's': 'D4', 
   'd': 'E4',
@@ -99,6 +113,7 @@ const keyboardMapping: Record<string, string> = {
   '9': 'D6',
   '0': 'E6',
   '-': 'F6',
+  '=': 'G6',
   
   // QWERTY row for lower octave
   'q': 'C3',
@@ -110,18 +125,25 @@ const keyboardMapping: Record<string, string> = {
   'm': 'B3',
   ',': 'C4',
   '.': 'D4',
-  '/': 'E4'
+  '/': 'E4',
+  
+  // ZXCV row for even lower octave
+  'z': 'C2',
+  'x': 'D2',
+  'c': 'E2'
 };
 
 // Reverse mapping for display
-const pianoToKeyboard: Record<string, string> = {};
+const pianoToKeyboard: Record<string, string[]> = {};
 Object.entries(keyboardMapping).forEach(([key, note]) => {
   if (!pianoToKeyboard[note]) {
-    pianoToKeyboard[note] = key.toUpperCase();
+    pianoToKeyboard[note] = [];
   }
+  pianoToKeyboard[note].push(key.toUpperCase());
 });
 
 const whiteKeys = [
+  'C2', 'D2', 'E2', 'F2', 'G2', 'A2', 'B2',
   'C3', 'D3', 'E3', 'F3', 'G3', 'A3', 'B3',
   'C4', 'D4', 'E4', 'F4', 'G4', 'A4', 'B4', 
   'C5', 'D5', 'E5', 'F5', 'G5', 'A5', 'B5',
@@ -129,6 +151,7 @@ const whiteKeys = [
 ];
 
 const blackKeys = [
+  'C#2', 'D#2', 'F#2', 'G#2', 'A#2',
   'C#3', 'D#3', 'F#3', 'G#3', 'A#3',
   'C#4', 'D#4', 'F#4', 'G#4', 'A#4', 
   'C#5', 'D#5', 'F#5', 'G#5', 'A#5',
@@ -140,36 +163,103 @@ export default function PianoKeyboard({
   onKeyRelease, 
   disabled = false,
   showLabels = true,
-  keySize = 'medium'
+  keySize = 'medium',
+  maxPolyphony = 32
 }: PianoKeyboardProps) {
   const [pressedKeys, setPressedKeys] = useState<Set<string>>(new Set());
+  const [keyboardPressedKeys, setKeyboardPressedKeys] = useState<Set<string>>(new Set());
   const [octaveShift, setOctaveShift] = useState(0);
   const [sustainMode, setSustainMode] = useState(false);
   const [velocity, setVelocity] = useState(0.8);
   const [keyPressStartTime, setKeyPressStartTime] = useState<Map<string, number>>(new Map());
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 });
+  const [voiceAllocation, setVoiceAllocation] = useState<Map<string, number>>(new Map());
   
   const sustainedKeys = useRef<Set<string>>(new Set());
   const mouseDownRef = useRef(false);
   const lastPlayedNote = useRef<string | null>(null);
+  const activeVoices = useRef<Set<string>>(new Set());
+  const keyRepeatTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
 
-  // Calculate velocity based on key press speed/force
-  const calculateVelocity = useCallback((keyName: string, pressTime?: number): number => {
+  // Enhanced velocity calculation with mouse dynamics
+  const calculateVelocity = useCallback((keyName: string, pressTime?: number, mouseVelocity?: number): number => {
+    let calculatedVelocity = velocity;
+    
     if (pressTime) {
       const timeSincePress = Date.now() - pressTime;
       // Faster key presses = higher velocity
       const velocityModifier = Math.max(0.3, Math.min(1.0, 1.0 - (timeSincePress / 500)));
-      return velocity * velocityModifier;
+      calculatedVelocity *= velocityModifier;
     }
-    return velocity;
+    
+    if (mouseVelocity !== undefined) {
+      // Use mouse velocity for additional expression
+      calculatedVelocity = Math.max(0.1, Math.min(1.0, mouseVelocity));
+    }
+    
+    return calculatedVelocity;
   }, [velocity]);
 
-  const handleKeyDown = useCallback((keyName: string, forceVelocity?: number) => {
-    if (disabled || pressedKeys.has(keyName)) return;
+  // Voice management - prioritize newer notes when reaching polyphony limit
+  const allocateVoice = useCallback((keyName: string): boolean => {
+    if (activeVoices.current.size < maxPolyphony) {
+      activeVoices.current.add(keyName);
+      setVoiceAllocation(prev => new Map(prev).set(keyName, Date.now()));
+      return true;
+    }
+    
+    // Find oldest voice to steal
+    let oldestKey = '';
+    let oldestTime = Date.now();
+    
+    voiceAllocation.forEach((time, key) => {
+      if (time < oldestTime) {
+        oldestTime = time;
+        oldestKey = key;
+      }
+    });
+    
+    if (oldestKey) {
+      // Release oldest voice
+      const frequency = keyFrequencies[oldestKey as keyof typeof keyFrequencies];
+      if (frequency) {
+        const shiftedFrequency = frequency * Math.pow(2, octaveShift);
+        onKeyRelease(shiftedFrequency);
+      }
+      
+      activeVoices.current.delete(oldestKey);
+      activeVoices.current.add(keyName);
+      setVoiceAllocation(prev => {
+        const newMap = new Map(prev);
+        newMap.delete(oldestKey);
+        newMap.set(keyName, Date.now());
+        return newMap;
+      });
+      
+      return true;
+    }
+    
+    return false;
+  }, [maxPolyphony, voiceAllocation, octaveShift, onKeyRelease]);
+
+  const handleKeyDown = useCallback((keyName: string, forceVelocity?: number, fromKeyboard = false) => {
+    if (disabled) return;
+    
+    // Prevent key repeat for keyboard events
+    if (fromKeyboard && keyboardPressedKeys.has(keyName)) return;
+    
+    // Check if we can allocate a voice
+    if (!allocateVoice(keyName)) {
+      console.warn('Maximum polyphony reached, stealing oldest voice');
+    }
     
     const pressTime = Date.now();
     setKeyPressStartTime(prev => new Map(prev).set(keyName, pressTime));
     setPressedKeys(prev => new Set(prev).add(keyName));
+    
+    if (fromKeyboard) {
+      setKeyboardPressedKeys(prev => new Set(prev).add(keyName));
+    }
     
     const frequency = keyFrequencies[keyName as keyof typeof keyFrequencies];
     if (frequency) {
@@ -179,9 +269,9 @@ export default function PianoKeyboard({
       onKeyPress(shiftedFrequency, noteVelocity);
       lastPlayedNote.current = keyName;
     }
-  }, [pressedKeys, onKeyPress, octaveShift, disabled, calculateVelocity]);
+  }, [disabled, keyboardPressedKeys, allocateVoice, octaveShift, calculateVelocity, onKeyPress]);
 
-  const handleKeyUp = useCallback((keyName: string) => {
+  const handleKeyUp = useCallback((keyName: string, fromKeyboard = false) => {
     if (disabled) return;
     
     // If sustain mode is on, don't release the key
@@ -196,7 +286,23 @@ export default function PianoKeyboard({
       return newSet;
     });
     
+    if (fromKeyboard) {
+      setKeyboardPressedKeys(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(keyName);
+        return newSet;
+      });
+    }
+    
     setKeyPressStartTime(prev => {
+      const newMap = new Map(prev);
+      newMap.delete(keyName);
+      return newMap;
+    });
+    
+    // Release voice
+    activeVoices.current.delete(keyName);
+    setVoiceAllocation(prev => {
       const newMap = new Map(prev);
       newMap.delete(keyName);
       return newMap;
@@ -208,7 +314,7 @@ export default function PianoKeyboard({
       const shiftedFrequency = frequency * Math.pow(2, octaveShift);
       onKeyRelease(shiftedFrequency);
     }
-  }, [onKeyRelease, octaveShift, sustainMode, disabled]);
+  }, [disabled, sustainMode, octaveShift, onKeyRelease]);
 
   // Handle sustain pedal toggle
   const toggleSustain = useCallback(() => {
@@ -223,8 +329,10 @@ export default function PianoKeyboard({
             const shiftedFrequency = frequency * Math.pow(2, octaveShift);
             onKeyRelease(shiftedFrequency);
           }
+          activeVoices.current.delete(keyName);
         });
         sustainedKeys.current.clear();
+        setVoiceAllocation(new Map());
         setPressedKeys(new Set());
       }
       
@@ -232,8 +340,9 @@ export default function PianoKeyboard({
     });
   }, [octaveShift, onKeyRelease]);
 
-  // Release all keys
+  // Release all keys - enhanced for polyphonic support
   const releaseAllKeys = useCallback(() => {
+    // Release all currently pressed keys
     pressedKeys.forEach(keyName => {
       const frequency = keyFrequencies[keyName as keyof typeof keyFrequencies];
       if (frequency) {
@@ -242,6 +351,7 @@ export default function PianoKeyboard({
       }
     });
     
+    // Release all sustained keys
     sustainedKeys.current.forEach(keyName => {
       const frequency = keyFrequencies[keyName as keyof typeof keyFrequencies];
       if (frequency) {
@@ -250,79 +360,100 @@ export default function PianoKeyboard({
       }
     });
     
+    // Clear all state
     setPressedKeys(new Set());
+    setKeyboardPressedKeys(new Set());
     sustainedKeys.current.clear();
+    activeVoices.current.clear();
+    setVoiceAllocation(new Map());
     setSustainMode(false);
+    
+    // Clear any pending key repeat timeouts
+    keyRepeatTimeouts.current.forEach(timeout => clearTimeout(timeout));
+    keyRepeatTimeouts.current.clear();
   }, [pressedKeys, octaveShift, onKeyRelease]);
 
-  // Create keyboard shortcuts for piano keys
-  const pianoShortcuts = Object.entries(keyboardMapping).map(([computerKey, pianoKey]) => ({
-    keys: [computerKey],
-    callback: (event: KeyboardEvent) => {
-      if (event.type === 'keydown') {
-        handleKeyDown(pianoKey);
-      }
-    },
-    description: `Play ${pianoKey}`,
-    preventDefault: true,
-    stopPropagation: true
-  }));
+  // Enhanced keyboard event handling for better polyphony
+  const handleKeyboardDown = useCallback((event: KeyboardEvent) => {
+    if (disabled) return;
+    
+    const computerKey = event.key.toLowerCase();
+    const pianoKey = keyboardMapping[computerKey];
+    
+    if (pianoKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      
+      // Prevent key repeat
+      if (event.repeat) return;
+      
+      handleKeyDown(pianoKey, undefined, true);
+    }
+  }, [disabled, handleKeyDown]);
 
-  // Add control shortcuts
+  const handleKeyboardUp = useCallback((event: KeyboardEvent) => {
+    if (disabled) return;
+    
+    const computerKey = event.key.toLowerCase();
+    const pianoKey = keyboardMapping[computerKey];
+    
+    if (pianoKey) {
+      event.preventDefault();
+      event.stopPropagation();
+      handleKeyUp(pianoKey, true);
+    }
+  }, [disabled, handleKeyUp]);
+
+  // Control shortcuts
   const controlShortcuts = [
     {
-      keys: ['z'],
+      keys: ['shift', 'z'],
       callback: () => {
-        setOctaveShift(prev => Math.max(prev - 1, -2));
+        setOctaveShift(prev => Math.max(prev - 1, -3));
       },
       description: 'Octave down',
       preventDefault: true
     },
     {
-      keys: ['x'],
+      keys: ['shift', 'x'],
       callback: () => {
-        setOctaveShift(prev => Math.min(prev + 1, 2));
+        setOctaveShift(prev => Math.min(prev + 1, 3));
       },
       description: 'Octave up',
       preventDefault: true
     },
     {
-      keys: ['c'],
+      keys: ['shift', 'c'],
       callback: toggleSustain,
       description: 'Toggle sustain',
       preventDefault: true
     },
     {
-      keys: ['space'],
+      keys: ['shift', 'space'],
       callback: releaseAllKeys,
       description: 'Release all keys',
       preventDefault: true
     }
   ];
 
-  const allShortcuts = [...pianoShortcuts, ...controlShortcuts];
-
-  // Use keyboard shortcuts hook
-  useKeyboardShortcuts(allShortcuts, {
+  // Use keyboard shortcuts hook for controls only
+  useKeyboardShortcuts(controlShortcuts, {
     enabled: !disabled,
     target: typeof window !== 'undefined' ? window : null
   });
 
-  // Handle key release events separately
+  // Enhanced keyboard event listeners with proper polyphonic handling
   useEffect(() => {
-    const handleKeyUpEvent = (event: KeyboardEvent) => {
-      if (disabled) return;
-      
-      const computerKey = event.key.toLowerCase();
-      const pianoKey = keyboardMapping[computerKey];
-      if (pianoKey) {
-        handleKeyUp(pianoKey);
-      }
-    };
+    if (disabled) return;
 
-    window.addEventListener('keyup', handleKeyUpEvent);
-    return () => window.removeEventListener('keyup', handleKeyUpEvent);
-  }, [handleKeyUp, disabled]);
+    window.addEventListener('keydown', handleKeyboardDown, true);
+    window.addEventListener('keyup', handleKeyboardUp, true);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyboardDown, true);
+      window.removeEventListener('keyup', handleKeyboardUp, true);
+    };
+  }, [handleKeyboardDown, handleKeyboardUp, disabled]);
 
   // Clear all pressed keys when component loses focus or window is not active
   useEffect(() => {
@@ -350,7 +481,7 @@ export default function PianoKeyboard({
     setMousePosition({ x: event.clientX, y: event.clientY });
   }, []);
 
-  // Touch support for mobile devices
+  // Enhanced touch support for mobile polyphony
   const handleTouchStart = useCallback((event: React.TouchEvent, keyName: string) => {
     event.preventDefault();
     const touch = event.touches[0];
@@ -367,46 +498,52 @@ export default function PianoKeyboard({
     handleKeyUp(keyName);
   }, [handleKeyUp]);
 
-  // Get black key position with improved spacing
+  // Get black key position with improved spacing for wider keyboard
   const getBlackKeyPosition = (keyName: string): string => {
     const positions: { [key: string]: string } = {
+      // Octave 2
+      'C#2': '2.1%',
+      'D#2': '5.9%',
+      'F#2': '13.5%',
+      'G#2': '17.3%',
+      'A#2': '21.1%',
       // Octave 3
-      'C#3': '3.5%',
-      'D#3': '10.5%',
-      'F#3': '24.5%',
-      'G#3': '31.5%',
-      'A#3': '38.5%',
+      'C#3': '28.7%',
+      'D#3': '32.5%',
+      'F#3': '40.1%',
+      'G#3': '43.9%',
+      'A#3': '47.7%',
       // Octave 4
-      'C#4': '52.5%',
-      'D#4': '59.5%',
-      'F#4': '73.5%',
-      'G#4': '80.5%',
-      'A#4': '87.5%',
+      'C#4': '55.3%',
+      'D#4': '59.1%',
+      'F#4': '66.7%',
+      'G#4': '70.5%',
+      'A#4': '74.3%',
       // Octave 5
-      'C#5': '101.5%',
-      'D#5': '108.5%',
-      'F#5': '122.5%',
-      'G#5': '129.5%',
-      'A#5': '136.5%',
+      'C#5': '81.9%',
+      'D#5': '85.7%',
+      'F#5': '93.3%',
+      'G#5': '97.1%',
+      'A#5': '100.9%',
       // Octave 6
-      'C#6': '150.5%',
-      'D#6': '157.5%'
+      'C#6': '108.5%',
+      'D#6': '112.3%'
     };
     return positions[keyName] || '0%';
   };
 
   // Key size configurations
   const sizeConfigs = {
-    small: { height: 'h-24', keyWidth: 'flex-1', fontSize: 'text-xs' },
-    medium: { height: 'h-32', keyWidth: 'flex-1', fontSize: 'text-sm' },
-    large: { height: 'h-40', keyWidth: 'flex-1', fontSize: 'text-base' }
+    small: { height: 'h-20', keyWidth: 'flex-1', fontSize: 'text-xs' },
+    medium: { height: 'h-28', keyWidth: 'flex-1', fontSize: 'text-sm' },
+    large: { height: 'h-36', keyWidth: 'flex-1', fontSize: 'text-base' }
   };
 
   const config = sizeConfigs[keySize];
 
   return (
     <div className={`relative bg-slate-800 p-4 rounded-xl ${disabled ? 'opacity-50 pointer-events-none' : ''}`}>
-      {/* Control Panel */}
+      {/* Enhanced Control Panel */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-4">
           {/* Octave Controls */}
@@ -414,9 +551,9 @@ export default function PianoKeyboard({
             <span className="text-sm text-slate-400">Octave:</span>
             <div className="flex items-center gap-1">
               <button
-                onClick={() => setOctaveShift(prev => Math.max(prev - 1, -2))}
+                onClick={() => setOctaveShift(prev => Math.max(prev - 1, -3))}
                 className="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white flex items-center justify-center transition-colors"
-                disabled={octaveShift <= -2}
+                disabled={octaveShift <= -3}
               >
                 -
               </button>
@@ -424,12 +561,28 @@ export default function PianoKeyboard({
                 {octaveShift >= 0 ? '+' : ''}{octaveShift}
               </span>
               <button
-                onClick={() => setOctaveShift(prev => Math.min(prev + 1, 2))}
+                onClick={() => setOctaveShift(prev => Math.min(prev + 1, 3))}
                 className="w-6 h-6 bg-slate-700 hover:bg-slate-600 rounded text-xs text-white flex items-center justify-center transition-colors"
-                disabled={octaveShift >= 2}
+                disabled={octaveShift >= 3}
               >
                 +
               </button>
+            </div>
+          </div>
+
+          {/* Polyphony Display */}
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-slate-400">Voices:</span>
+            <div className="flex items-center gap-1">
+              <span className="text-sm text-cyan-400 font-mono">
+                {activeVoices.current.size}/{maxPolyphony}
+              </span>
+              <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
+                <div 
+                  className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all duration-150"
+                  style={{ width: `${(activeVoices.current.size / maxPolyphony) * 100}%` }}
+                />
+              </div>
             </div>
           </div>
 
@@ -472,26 +625,26 @@ export default function PianoKeyboard({
         </div>
 
         <div className="text-xs text-slate-400">
-          {pressedKeys.size} key{pressedKeys.size !== 1 ? 's' : ''} active
+          {pressedKeys.size} active
           {sustainedKeys.current.size > 0 && ` • ${sustainedKeys.current.size} sustained`}
         </div>
       </div>
 
-      {/* Piano Keyboard */}
+      {/* Enhanced Piano Keyboard */}
       <div 
-        className={`relative ${config.height} flex overflow-x-auto`}
+        className={`relative ${config.height} flex overflow-x-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-slate-800`}
         onMouseMove={handleMouseMove}
       >
         {/* White Keys */}
         {whiteKeys.map((keyName, index) => {
           const isPressed = pressedKeys.has(keyName) || sustainedKeys.current.has(keyName);
           const isSustained = sustainedKeys.current.has(keyName) && !pressedKeys.has(keyName);
-          const computerKey = pianoToKeyboard[keyName];
+          const computerKeys = pianoToKeyboard[keyName] || [];
           
           return (
             <button
               key={keyName}
-              className={`${config.keyWidth} h-full border border-slate-600 rounded-b-lg mx-0.5 transition-all duration-75 relative select-none ${
+              className={`${config.keyWidth} min-w-[2.5rem] h-full border border-slate-600 rounded-b-lg mx-0.5 transition-all duration-75 relative select-none ${
                 isPressed
                   ? isSustained
                     ? 'bg-gradient-to-b from-amber-400 to-amber-600 shadow-lg transform scale-95'
@@ -528,14 +681,21 @@ export default function PianoKeyboard({
                     }`}>
                       {keyName.replace(/[0-9]/g, '')}
                     </span>
-                    {computerKey && (
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${
-                        isPressed 
-                          ? 'bg-white/20 text-white' 
-                          : 'bg-slate-200 text-slate-600'
-                      }`}>
-                        {computerKey}
-                      </span>
+                    {computerKeys.length > 0 && (
+                      <div className="flex flex-wrap gap-0.5 justify-center">
+                        {computerKeys.slice(0, 2).map((key, idx) => (
+                          <span 
+                            key={idx}
+                            className={`text-xs px-1 py-0.5 rounded ${
+                              isPressed 
+                                ? 'bg-white/20 text-white' 
+                                : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {key}
+                          </span>
+                        ))}
+                      </div>
                     )}
                   </>
                 )}
@@ -549,12 +709,12 @@ export default function PianoKeyboard({
           {blackKeys.map((keyName) => {
             const isPressed = pressedKeys.has(keyName) || sustainedKeys.current.has(keyName);
             const isSustained = sustainedKeys.current.has(keyName) && !pressedKeys.has(keyName);
-            const computerKey = pianoToKeyboard[keyName];
+            const computerKeys = pianoToKeyboard[keyName] || [];
             
             return (
               <button
                 key={keyName}
-                className={`absolute w-8 h-full rounded-b-lg transition-all duration-75 pointer-events-auto select-none ${
+                className={`absolute w-7 h-full rounded-b-lg transition-all duration-75 pointer-events-auto select-none ${
                   isPressed
                     ? isSustained
                       ? 'bg-gradient-to-b from-amber-500 to-amber-700 shadow-lg transform scale-95'
@@ -592,13 +752,13 @@ export default function PianoKeyboard({
                       }`}>
                         {keyName.replace(/[0-9]/g, '').replace('#', '♯')}
                       </span>
-                      {computerKey && (
+                      {computerKeys.length > 0 && (
                         <span className={`text-xs px-1 py-0.5 rounded ${
                           isPressed 
                             ? 'bg-white/20 text-white' 
                             : 'bg-slate-600 text-gray-300'
                         }`}>
-                          {computerKey}
+                          {computerKeys[0]}
                         </span>
                       )}
                     </>
@@ -610,25 +770,34 @@ export default function PianoKeyboard({
         </div>
       </div>
 
-      {/* Help Text */}
+      {/* Enhanced Help Text */}
       <div className="mt-4 text-center">
         <p className="text-xs text-slate-400">
-          Play multiple keys simultaneously • Computer keyboard: A-J white keys, W/E/T/Y/U black keys
+          Enhanced polyphonic support • Up to {maxPolyphony} simultaneous notes • Multiple keyboard layers
         </p>
         <p className="text-xs text-slate-500 mt-1">
-          Z/X: Octave • C: Sustain • Space: Release all • Mouse drag for glissando
+          Shift+Z/X: Octave • Shift+C: Sustain • Shift+Space: Release all • Voice stealing when limit reached
         </p>
       </div>
 
-      {/* Active Keys Display */}
+      {/* Enhanced Active Keys Display */}
       {pressedKeys.size > 0 && (
         <div className="mt-2 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-700/50 rounded-lg">
-            <span className="text-xs text-cyan-400">Playing:</span>
+            <span className="text-xs text-cyan-400">Playing ({activeVoices.current.size}):</span>
             <span className="text-xs text-white font-mono">
-              {Array.from(pressedKeys).slice(0, 8).join(', ')}
-              {pressedKeys.size > 8 && '...'}
+              {Array.from(pressedKeys).slice(0, 6).join(', ')}
+              {pressedKeys.size > 6 && `... +${pressedKeys.size - 6}`}
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* Voice allocation indicator */}
+      {activeVoices.current.size > maxPolyphony * 0.8 && (
+        <div className="mt-2 text-center">
+          <div className="inline-flex items-center gap-2 px-2 py-1 bg-yellow-600/20 border border-yellow-600/50 rounded text-xs text-yellow-400">
+            ⚠️ High polyphony usage - voice stealing may occur
           </div>
         </div>
       )}
