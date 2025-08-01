@@ -5,171 +5,222 @@ import { AudioEngine } from '@/lib/audioEngine';
 
 interface AudioVisualizerProps {
   audioEngine: AudioEngine | null;
+  type?: 'waveform' | 'frequency' | 'both';
+  color?: string;
+  height?: number;
 }
 
-export default function AudioVisualizer({ audioEngine }: AudioVisualizerProps) {
+export default function AudioVisualizer({ 
+  audioEngine, 
+  type = 'both', 
+  color = '#00ff88',
+  height = 200 
+}: AudioVisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const animationFrameRef = useRef<number>();
+  const animationRef = useRef<number>();
   const [isActive, setIsActive] = useState(false);
 
   useEffect(() => {
-    if (!audioEngine || !canvasRef.current) {
-      return;
-    }
+    if (!audioEngine || !canvasRef.current) return;
 
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
     // Set canvas size
-    const resizeCanvas = () => {
-      const rect = canvas.getBoundingClientRect();
-      canvas.width = rect.width * window.devicePixelRatio;
-      canvas.height = rect.height * window.devicePixelRatio;
-      ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
-    };
+    const rect = canvas.getBoundingClientRect();
+    canvas.width = rect.width * devicePixelRatio;
+    canvas.height = rect.height * devicePixelRatio;
+    ctx.scale(devicePixelRatio, devicePixelRatio);
 
-    resizeCanvas();
-    window.addEventListener('resize', resizeCanvas);
+    let analyser: AnalyserNode;
+    let dataArray: Uint8Array;
+    let timeDataArray: Uint8Array;
 
-    const animate = () => {
-      if (!ctx || !audioEngine.initialized) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-        return;
+    // Setup audio analysis
+    try {
+      analyser = audioEngine.audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      analyser.smoothingTimeConstant = 0.8;
+      analyser.minDecibels = -90;
+      analyser.maxDecibels = -10;
+
+      // Connect to audio engine's master output
+      if (audioEngine.masterGain) {
+        audioEngine.masterGain.connect(analyser);
       }
 
-      try {
-        const dataArray = audioEngine.getAnalyserData();
-        
-        // Check if there's audio activity
-        const hasActivity = dataArray.some(value => value > 10);
-        setIsActive(hasActivity);
-
-        // Clear canvas
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.1)'; // slate-900 with opacity
-        ctx.fillRect(0, 0, canvas.width / window.devicePixelRatio, canvas.height / window.devicePixelRatio);
-
-        if (dataArray.length === 0) {
-          // Draw idle state
-          drawIdleState(ctx, canvas);
-        } else {
-          // Draw frequency bars
-          drawFrequencyBars(ctx, canvas, dataArray);
-        }
-      } catch (error) {
-        console.error('Visualizer error:', error);
-      }
-
-      animationFrameRef.current = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    return () => {
-      window.removeEventListener('resize', resizeCanvas);
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [audioEngine]);
-
-  const drawIdleState = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement) => {
-    const width = canvas.width / window.devicePixelRatio;
-    const height = canvas.height / window.devicePixelRatio;
-    const centerY = height / 2;
-    const time = Date.now() * 0.001;
-
-    // Draw animated sine wave
-    ctx.strokeStyle = 'rgba(34, 211, 238, 0.3)'; // cyan-400 with opacity
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-
-    for (let x = 0; x < width; x++) {
-      const y = centerY + Math.sin((x * 0.02) + time) * 20;
-      if (x === 0) {
-        ctx.moveTo(x, y);
-      } else {
-        ctx.lineTo(x, y);
-      }
+      const bufferLength = analyser.frequencyBinCount;
+      dataArray = new Uint8Array(bufferLength);
+      timeDataArray = new Uint8Array(bufferLength);
+      
+      setIsActive(true);
+    } catch (error) {
+      console.error('Failed to setup audio analyzer:', error);
+      return;
     }
-    ctx.stroke();
 
-    // Draw center text
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.6)'; // slate-400 with opacity
-    ctx.font = '14px Inter, sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('Audio Visualizer', width / 2, centerY - 40);
-    ctx.fillText('Play notes to see frequency analysis', width / 2, centerY + 60);
-  };
+    const draw = () => {
+      if (!ctx || !analyser) return;
 
-  const drawFrequencyBars = (ctx: CanvasRenderingContext2D, canvas: HTMLCanvasElement, dataArray: Uint8Array) => {
-    const width = canvas.width / window.devicePixelRatio;
-    const height = canvas.height / window.devicePixelRatio;
-    const barCount = Math.min(64, dataArray.length / 4); // Reduce number of bars for better performance
-    const barWidth = width / barCount;
+      analyser.getByteFrequencyData(dataArray);
+      analyser.getByteTimeDomainData(timeDataArray);
 
-    for (let i = 0; i < barCount; i++) {
-      // Average multiple frequency bins for each bar
-      const startIndex = Math.floor((i * dataArray.length) / barCount);
-      const endIndex = Math.floor(((i + 1) * dataArray.length) / barCount);
-      let sum = 0;
-      for (let j = startIndex; j < endIndex; j++) {
-        sum += dataArray[j];
-      }
-      const barHeight = (sum / (endIndex - startIndex)) / 255 * height * 0.8;
+      // Clear canvas with dark background
+      ctx.fillStyle = 'rgba(10, 10, 10, 0.2)';
+      ctx.fillRect(0, 0, rect.width, rect.height);
 
       // Create gradient
-      const gradient = ctx.createLinearGradient(0, height, 0, height - barHeight);
-      gradient.addColorStop(0, 'rgba(34, 211, 238, 0.8)'); // cyan-400
-      gradient.addColorStop(0.5, 'rgba(59, 130, 246, 0.6)'); // blue-500
-      gradient.addColorStop(1, 'rgba(147, 51, 234, 0.4)'); // violet-600
+      const gradient = ctx.createLinearGradient(0, 0, 0, rect.height);
+      gradient.addColorStop(0, color);
+      gradient.addColorStop(0.5, color + '80');
+      gradient.addColorStop(1, color + '20');
+
+      if (type === 'frequency' || type === 'both') {
+        drawFrequencyBars(ctx, dataArray, rect.width, rect.height / (type === 'both' ? 2 : 1), gradient);
+      }
+
+      if (type === 'waveform' || type === 'both') {
+        const yOffset = type === 'both' ? rect.height / 2 : 0;
+        const waveHeight = type === 'both' ? rect.height / 2 : rect.height;
+        drawWaveform(ctx, timeDataArray, rect.width, waveHeight, yOffset, color);
+      }
+
+      animationRef.current = requestAnimationFrame(draw);
+    };
+
+    const drawFrequencyBars = (
+      ctx: CanvasRenderingContext2D, 
+      data: Uint8Array, 
+      width: number, 
+      height: number, 
+      gradient: CanvasGradient
+    ) => {
+      const barCount = Math.min(data.length / 4, width / 3); // Reduce bar density
+      const barWidth = width / barCount;
 
       ctx.fillStyle = gradient;
-      ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, barHeight);
 
-      // Add glow effect for active bars
-      if (barHeight > height * 0.1) {
-        ctx.shadowColor = 'rgba(34, 211, 238, 0.5)';
-        ctx.shadowBlur = 10;
-        ctx.fillRect(i * barWidth, height - barHeight, barWidth - 1, Math.min(barHeight, 4));
-        ctx.shadowBlur = 0;
+      for (let i = 0; i < barCount; i++) {
+        const value = data[i * 4] / 255; // Sample every 4th frequency bin
+        const barHeight = value * height * 0.8; // Scale down slightly
+
+        // Add some logarithmic scaling for better visual representation
+        const logValue = Math.log(value * 10 + 1) / Math.log(11);
+        const scaledHeight = logValue * height * 0.9;
+
+        const x = i * barWidth;
+        const y = height - scaledHeight;
+
+        // Draw bar with rounded top
+        ctx.beginPath();
+        ctx.roundRect(x + 1, y, barWidth - 2, scaledHeight, [2, 2, 0, 0]);
+        ctx.fill();
+
+        // Add peak indicator
+        if (value > 0.7) {
+          ctx.fillStyle = '#ff6b6b';
+          ctx.beginPath();
+          ctx.roundRect(x + 1, y - 4, barWidth - 2, 2, 1);
+          ctx.fill();
+          ctx.fillStyle = gradient;
+        }
       }
-    }
+    };
 
-    // Draw frequency labels
-    ctx.fillStyle = 'rgba(148, 163, 184, 0.6)';
-    ctx.font = '10px Inter, sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('Low', 10, height - 10);
-    ctx.textAlign = 'right';
-    ctx.fillText('High', width - 10, height - 10);
-  };
+    const drawWaveform = (
+      ctx: CanvasRenderingContext2D,
+      data: Uint8Array,
+      width: number,
+      height: number,
+      yOffset: number,
+      strokeColor: string
+    ) => {
+      ctx.strokeStyle = strokeColor;
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+
+      ctx.beginPath();
+
+      const sliceWidth = width / data.length;
+      let x = 0;
+
+      for (let i = 0; i < data.length; i++) {
+        const v = data[i] / 128.0;
+        const y = (v * height / 2) + yOffset + (height / 2);
+
+        if (i === 0) {
+          ctx.moveTo(x, y);
+        } else {
+          ctx.lineTo(x, y);
+        }
+
+        x += sliceWidth;
+      }
+
+      ctx.stroke();
+
+      // Add glow effect
+      ctx.shadowColor = strokeColor;
+      ctx.shadowBlur = 10;
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+    };
+
+    draw();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      if (analyser && audioEngine.masterGain) {
+        try {
+          analyser.disconnect();
+        } catch (error) {
+          // Ignore disconnect errors
+        }
+      }
+      setIsActive(false);
+    };
+  }, [audioEngine, type, color, height]);
 
   return (
-    <div className="relative">
+    <div className="relative w-full" style={{ height: `${height}px` }}>
       <canvas
         ref={canvasRef}
-        className="w-full h-48 rounded-lg bg-slate-900/50 border border-slate-700"
-        style={{ width: '100%', height: '192px' }}
+        className="w-full h-full rounded-lg bg-slate-900/50"
+        style={{ height: `${height}px` }}
       />
       
-      {/* Status Indicator */}
-      <div className="absolute top-3 right-3">
-        <div className={`w-3 h-3 rounded-full transition-all duration-300 ${
-          isActive 
-            ? 'bg-cyan-400 shadow-lg shadow-cyan-400/50' 
-            : 'bg-slate-600'
-        }`} />
+      {/* Activity indicator */}
+      <div className="absolute top-2 right-2 flex items-center gap-2">
+        <div 
+          className={`w-2 h-2 rounded-full transition-all duration-300 ${
+            isActive ? 'bg-green-400 animate-pulse' : 'bg-slate-600'
+          }`} 
+        />
+        <span className="text-xs text-slate-400 font-mono">
+          {isActive ? 'ACTIVE' : 'INACTIVE'}
+        </span>
       </div>
 
-      {/* Info Overlay */}
-      <div className="absolute bottom-3 left-3 text-xs text-slate-400">
-        {audioEngine?.initialized ? (
-          isActive ? 'Analyzing audio...' : 'Ready - play some notes!'
-        ) : (
-          'Initializing...'
-        )}
+      {/* Type indicator */}
+      <div className="absolute bottom-2 left-2">
+        <span className="text-xs text-slate-400 font-mono bg-slate-800/50 px-2 py-1 rounded">
+          {type.toUpperCase()}
+        </span>
       </div>
+
+      {/* No audio message */}
+      {!audioEngine && (
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="text-center">
+            <div className="w-12 h-12 border-2 border-slate-600 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
+            <p className="text-slate-400 text-sm">Waiting for audio...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

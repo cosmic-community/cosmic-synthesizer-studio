@@ -8,9 +8,10 @@ interface ModernSliderProps {
   step?: number;
   onChange: (value: number) => void;
   unit?: string;
+  displayValue?: string;
+  color?: string;
+  disabled?: boolean;
   orientation?: 'horizontal' | 'vertical';
-  size?: 'sm' | 'md' | 'lg';
-  color?: 'cyan' | 'blue' | 'green' | 'purple';
 }
 
 export default function ModernSlider({
@@ -21,62 +22,71 @@ export default function ModernSlider({
   step = 0.01,
   onChange,
   unit = '',
-  orientation = 'horizontal',
-  size = 'md',
-  color = 'cyan'
+  displayValue,
+  color = '#00ff88',
+  disabled = false,
+  orientation = 'horizontal'
 }: ModernSliderProps) {
   const normalizedValue = (value - min) / (max - min);
-  
-  const sizeClasses = {
-    sm: orientation === 'horizontal' ? 'h-1' : 'w-1 h-20',
-    md: orientation === 'horizontal' ? 'h-2' : 'w-2 h-24',
-    lg: orientation === 'horizontal' ? 'h-3' : 'w-3 h-32'
+  const percentage = normalizedValue * 100;
+
+  const formatValue = () => {
+    if (displayValue) return displayValue;
+    
+    if (unit === 'Hz' && value >= 1000) {
+      return `${(value / 1000).toFixed(1)}k${unit}`;
+    }
+    
+    if (step < 1) {
+      return `${value.toFixed(2)}${unit}`;
+    }
+    
+    return `${Math.round(value)}${unit}`;
   };
 
-  const thumbSizeClasses = {
-    sm: 'w-3 h-3',
-    md: 'w-4 h-4',
-    lg: 'w-5 h-5'
+  const handleDoubleClick = () => {
+    if (disabled) return;
+    const middleValue = (min + max) / 2;
+    onChange(middleValue);
   };
-
-  const colorClasses = {
-    cyan: 'from-cyan-400 to-cyan-600',
-    blue: 'from-blue-400 to-blue-600',
-    green: 'from-green-400 to-green-600',
-    purple: 'from-purple-400 to-purple-600'
-  };
-
-  const displayValue = Math.round(value * 100) / 100;
 
   return (
-    <div className={`flex ${orientation === 'vertical' ? 'flex-col items-center' : 'items-center space-x-3'} space-y-2`}>
-      <label className="text-xs font-medium text-slate-300 min-w-0">
-        {label}
-      </label>
-      
-      <div className={`relative ${orientation === 'horizontal' ? 'flex-1' : ''}`}>
-        {/* Track */}
-        <div className={`${sizeClasses[size]} bg-slate-700 rounded-full relative overflow-hidden`}>
-          {/* Progress */}
-          <div 
-            className={`absolute top-0 left-0 ${sizeClasses[size]} bg-gradient-to-r ${colorClasses[color]} rounded-full transition-all duration-150`}
-            style={{
-              [orientation === 'horizontal' ? 'width' : 'height']: `${normalizedValue * 100}%`
-            }}
-          />
-        </div>
+    <div className={`space-y-2 ${orientation === 'vertical' ? 'flex flex-col items-center h-32' : ''}`}>
+      {/* Label and Value */}
+      <div className="flex items-center justify-between">
+        <label className="text-sm text-slate-300 font-medium">
+          {label}
+        </label>
+        <span className="text-sm font-mono text-white bg-slate-700/50 px-2 py-1 rounded">
+          {formatValue()}
+        </span>
+      </div>
 
-        {/* Thumb */}
+      {/* Slider Container */}
+      <div className={`relative ${orientation === 'vertical' ? 'h-full w-4' : 'h-4 w-full'}`}>
+        {/* Track */}
         <div
-          className={`absolute ${thumbSizeClasses[size]} bg-gradient-to-br ${colorClasses[color]} rounded-full shadow-lg transform transition-all duration-150 hover:scale-110 cursor-pointer`}
+          className={`absolute rounded-full bg-slate-700 ${
+            orientation === 'vertical' ? 'w-2 h-full left-1' : 'h-2 w-full top-1'
+          }`}
           style={{
-            [orientation === 'horizontal' ? 'left' : 'bottom']: `${normalizedValue * 100}%`,
-            [orientation === 'horizontal' ? 'top' : 'left']: '50%',
-            transform: `translate${orientation === 'horizontal' ? 'X' : 'Y'}(-50%) translate${orientation === 'horizontal' ? 'Y' : 'X'}(-50%)`
+            boxShadow: 'inset 0 1px 3px rgba(0,0,0,0.5)'
           }}
         />
 
-        {/* Hidden Input */}
+        {/* Progress */}
+        <div
+          className={`absolute rounded-full transition-all duration-150 ${
+            orientation === 'vertical' ? 'w-2 left-1 bottom-0' : 'h-2 top-1 left-0'
+          }`}
+          style={{
+            backgroundColor: color,
+            boxShadow: `0 0 8px ${color}60`,
+            [orientation === 'vertical' ? 'height' : 'width']: `${percentage}%`
+          }}
+        />
+
+        {/* Slider Input */}
         <input
           type="range"
           min={min}
@@ -84,12 +94,59 @@ export default function ModernSlider({
           step={step}
           value={value}
           onChange={(e) => onChange(parseFloat(e.target.value))}
-          className={`absolute inset-0 w-full h-full opacity-0 cursor-pointer ${orientation === 'vertical' ? 'rotate-90' : ''}`}
+          onDoubleClick={handleDoubleClick}
+          disabled={disabled}
+          className={`absolute w-full h-full opacity-0 cursor-pointer ${
+            disabled ? 'cursor-not-allowed' : ''
+          } ${orientation === 'vertical' ? 'slider-vertical' : ''}`}
+          style={{
+            WebkitAppearance: 'none',
+            background: 'transparent'
+          }}
         />
+
+        {/* Thumb */}
+        <div
+          className={`absolute w-4 h-4 rounded-full border-2 border-white shadow-lg transition-all duration-150 pointer-events-none ${
+            disabled ? 'opacity-50' : 'hover:scale-110'
+          }`}
+          style={{
+            backgroundColor: color,
+            boxShadow: `0 2px 8px rgba(0,0,0,0.3), 0 0 4px ${color}80`,
+            [orientation === 'vertical' ? 'bottom' : 'left']: `calc(${percentage}% - 8px)`,
+            [orientation === 'vertical' ? 'left' : 'top']: '0px'
+          }}
+        />
+
+        {/* Step Markers */}
+        {step >= 0.1 && (max - min) / step <= 10 && (
+          <div className={`absolute ${orientation === 'vertical' ? 'w-full h-full' : 'w-full h-full'}`}>
+            {Array.from({ length: Math.floor((max - min) / step) + 1 }, (_, i) => {
+              const stepValue = min + (i * step);
+              const stepPercentage = ((stepValue - min) / (max - min)) * 100;
+              
+              return (
+                <div
+                  key={i}
+                  className={`absolute w-1 h-1 bg-slate-500 rounded-full ${
+                    orientation === 'vertical' ? 'left-1.5' : 'top-1.5'
+                  }`}
+                  style={{
+                    [orientation === 'vertical' ? 'bottom' : 'left']: `${stepPercentage}%`
+                  }}
+                />
+              );
+            })}
+          </div>
+        )}
       </div>
 
-      <div className="text-xs font-mono text-slate-300 min-w-max">
-        {displayValue}{unit}
+      {/* Min/Max Labels */}
+      <div className={`flex justify-between text-xs text-slate-400 ${
+        orientation === 'vertical' ? 'flex-col-reverse h-full' : ''
+      }`}>
+        <span>{min}{unit}</span>
+        <span>{max}{unit}</span>
       </div>
     </div>
   );
