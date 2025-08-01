@@ -57,7 +57,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               min={0}
               max={1}
               onChange={(value) => updateEffect('reverb', 'amount', value)}
-              size="sm"
+              size="small"
             />
             <ModernKnob
               label="Room Size"
@@ -65,7 +65,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               min={0}
               max={1}
               onChange={(value) => updateEffect('reverb', 'roomSize', value)}
-              size="sm"
+              size="small"
             />
           </div>
         </div>
@@ -97,7 +97,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               min={0}
               max={1}
               onChange={(value) => updateEffect('delay', 'time', value)}
-              size="sm"
+              size="small"
               unit="s"
             />
             <ModernKnob
@@ -106,7 +106,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               min={0}
               max={0.95}
               onChange={(value) => updateEffect('delay', 'feedback', value)}
-              size="sm"
+              size="small"
             />
           </div>
         </div>
@@ -138,7 +138,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               min={0}
               max={100}
               onChange={(value) => updateEffect('distortion', 'amount', value)}
-              size="sm"
+              size="small"
             />
             <div>
               <label className="block text-xs text-slate-300 mb-2">Type</label>
@@ -183,7 +183,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               min={0.1}
               max={10}
               onChange={(value) => updateEffect('chorus', 'rate', value)}
-              size="sm"
+              size="small"
               unit="Hz"
             />
             <ModernKnob
@@ -192,7 +192,7 @@ export default function EffectsRack({ synthState, onStateChange }: EffectsRackPr
               min={0}
               max={1}
               onChange={(value) => updateEffect('chorus', 'depth', value)}
-              size="sm"
+              size="small"
             />
           </div>
         </div>

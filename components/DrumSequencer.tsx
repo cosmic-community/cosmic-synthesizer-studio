@@ -206,7 +206,6 @@ export default function DrumSequencer({ drumState, onStateChange }: DrumSequence
                     onStateChange({ ...drumState, sounds: newSounds });
                   }}
                   className="w-full h-1 slider-modern"
-                  style={{ writingMode: 'bt-lr', appearance: 'slider-vertical' }}
                 />
               </div>
 

@@ -141,7 +141,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('reverb', 'roomSize', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Damping"
@@ -149,7 +149,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('reverb', 'damping', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Pre-delay"
@@ -157,7 +157,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={500}
           onChange={(value) => updateEffect('reverb', 'predelay', value)}
-          size="sm"
+          size="small"
           unit="ms"
         />
         <ModernKnob
@@ -166,7 +166,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={2}
           onChange={(value) => updateEffect('reverb', 'width', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Wet"
@@ -174,7 +174,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('reverb', 'amount', value)}
-          size="sm"
+          size="small"
         />
         <div>
           <label className="block text-xs text-slate-300 mb-2">Type</label>
@@ -205,7 +205,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0.01}
           max={2}
           onChange={(value) => updateEffect('delay', 'time', value)}
-          size="sm"
+          size="small"
           unit="s"
         />
         <ModernKnob
@@ -214,7 +214,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={0.95}
           onChange={(value) => updateEffect('delay', 'feedback', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="High Cut"
@@ -222,7 +222,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={200}
           max={20000}
           onChange={(value) => updateEffect('delay', 'highCut', value)}
-          size="sm"
+          size="small"
           unit="Hz"
         />
         <ModernKnob
@@ -231,7 +231,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('delay', 'wetLevel', value)}
-          size="sm"
+          size="small"
         />
         <div>
           <label className="block text-xs text-slate-300 mb-2">Sync</label>
@@ -279,7 +279,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0.1}
           max={10}
           onChange={(value) => updateEffect('chorus', 'rate', value)}
-          size="sm"
+          size="small"
           unit="Hz"
         />
         <ModernKnob
@@ -288,7 +288,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('chorus', 'depth', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Feedback"
@@ -296,7 +296,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={0.8}
           onChange={(value) => updateEffect('chorus', 'feedback', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Mix"
@@ -304,7 +304,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('chorus', 'mix', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Voices"
@@ -313,7 +313,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           max={8}
           step={1}
           onChange={(value) => updateEffect('chorus', 'voices', Math.round(value))}
-          size="sm"
+          size="small"
         />
         <div>
           <label className="block text-xs text-slate-300 mb-2">Waveform</label>
@@ -342,7 +342,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={100}
           onChange={(value) => updateEffect('distortion', 'drive', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Tone"
@@ -350,7 +350,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('distortion', 'tone', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Level"
@@ -358,7 +358,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('distortion', 'level', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Bias"
@@ -366,7 +366,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={-1}
           max={1}
           onChange={(value) => updateEffect('distortion', 'bias', value)}
-          size="sm"
+          size="small"
         />
         <div>
           <label className="block text-xs text-slate-300 mb-2">Type</label>
@@ -409,7 +409,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={-60}
           max={0}
           onChange={(value) => updateEffect('compressor', 'threshold', value)}
-          size="sm"
+          size="small"
           unit="dB"
         />
         <ModernKnob
@@ -418,7 +418,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={1}
           max={20}
           onChange={(value) => updateEffect('compressor', 'ratio', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Attack"
@@ -426,7 +426,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0.1}
           max={100}
           onChange={(value) => updateEffect('compressor', 'attack', value)}
-          size="sm"
+          size="small"
           unit="ms"
         />
         <ModernKnob
@@ -435,7 +435,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={10}
           max={1000}
           onChange={(value) => updateEffect('compressor', 'release', value)}
-          size="sm"
+          size="small"
           unit="ms"
         />
         <ModernKnob
@@ -444,7 +444,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={10}
           onChange={(value) => updateEffect('compressor', 'knee', value)}
-          size="sm"
+          size="small"
           unit="dB"
         />
         <ModernKnob
@@ -453,7 +453,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={20}
           onChange={(value) => updateEffect('compressor', 'makeup', value)}
-          size="sm"
+          size="small"
           unit="dB"
         />
       </div>
@@ -470,7 +470,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={20}
           max={20000}
           onChange={(value) => updateEffect('filter', 'cutoff', value)}
-          size="sm"
+          size="small"
           unit="Hz"
         />
         <ModernKnob
@@ -479,7 +479,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={0.95}
           onChange={(value) => updateEffect('filter', 'resonance', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Drive"
@@ -487,7 +487,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('filter', 'drive', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Key Follow"
@@ -495,7 +495,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('filter', 'keyFollow', value)}
-          size="sm"
+          size="small"
         />
         <div>
           <label className="block text-xs text-slate-300 mb-2">Type</label>
@@ -538,7 +538,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={-12}
           max={12}
           onChange={(value) => updateEffect('eq', 'low', value)}
-          size="sm"
+          size="small"
           unit="dB"
         />
         <ModernKnob
@@ -547,7 +547,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={-12}
           max={12}
           onChange={(value) => updateEffect('eq', 'lowMid', value)}
-          size="sm"
+          size="small"
           unit="dB"
         />
         <ModernKnob
@@ -556,7 +556,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={-12}
           max={12}
           onChange={(value) => updateEffect('eq', 'highMid', value)}
-          size="sm"
+          size="small"
           unit="dB"
         />
         <ModernKnob
@@ -565,7 +565,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={-12}
           max={12}
           onChange={(value) => updateEffect('eq', 'high', value)}
-          size="sm"
+          size="small"
           unit="dB"
         />
         <ModernKnob
@@ -574,7 +574,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={20}
           max={500}
           onChange={(value) => updateEffect('eq', 'lowFreq', value)}
-          size="sm"
+          size="small"
           unit="Hz"
         />
         <ModernKnob
@@ -583,7 +583,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={200}
           max={2000}
           onChange={(value) => updateEffect('eq', 'lowMidFreq', value)}
-          size="sm"
+          size="small"
           unit="Hz"
         />
         <ModernKnob
@@ -592,7 +592,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={1000}
           max={8000}
           onChange={(value) => updateEffect('eq', 'highMidFreq', value)}
-          size="sm"
+          size="small"
           unit="Hz"
         />
         <ModernKnob
@@ -601,7 +601,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={5000}
           max={20000}
           onChange={(value) => updateEffect('eq', 'highFreq', value)}
-          size="sm"
+          size="small"
           unit="Hz"
         />
       </div>
@@ -618,7 +618,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={2}
           onChange={(value) => updateEffect('stereo', 'width', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Bass Width"
@@ -626,7 +626,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={1}
           onChange={(value) => updateEffect('stereo', 'bass', value)}
-          size="sm"
+          size="small"
         />
         <ModernKnob
           label="Delay"
@@ -634,7 +634,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={0}
           max={5}
           onChange={(value) => updateEffect('stereo', 'delay', value)}
-          size="sm"
+          size="small"
           unit="ms"
         />
         <ModernKnob
@@ -643,7 +643,7 @@ export default function EnhancedEffectsRack({ synthState, onStateChange }: Enhan
           min={-180}
           max={180}
           onChange={(value) => updateEffect('stereo', 'phase', value)}
-          size="sm"
+          size="small"
           unit="°"
         />
       </div>

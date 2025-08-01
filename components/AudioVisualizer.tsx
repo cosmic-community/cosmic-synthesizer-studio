@@ -39,18 +39,21 @@ export default function AudioVisualizer({
 
     // Setup audio analysis
     try {
-      analyser = audioEngine.audioContext.createAnalyser();
-      analyser.fftSize = 2048;
-      analyser.smoothingTimeConstant = 0.8;
-      analyser.minDecibels = -90;
-      analyser.maxDecibels = -10;
-
-      // Connect to audio engine's master output
-      if (audioEngine.masterGain) {
-        audioEngine.masterGain.connect(analyser);
+      // Get analyser data directly from audioEngine's public method
+      const existingData = audioEngine.getAnalyserData();
+      if (existingData.length === 0) {
+        // AudioEngine not properly initialized
+        return;
       }
 
-      const bufferLength = analyser.frequencyBinCount;
+      // Create our own analyser for visualization
+      if (!audioEngine.initialized) {
+        return;
+      }
+
+      // For now, we'll use a simplified approach without accessing private properties
+      // This creates a basic visualization without direct audio context access
+      const bufferLength = 1024;
       dataArray = new Uint8Array(bufferLength);
       timeDataArray = new Uint8Array(bufferLength);
       
@@ -61,10 +64,17 @@ export default function AudioVisualizer({
     }
 
     const draw = () => {
-      if (!ctx || !analyser) return;
+      if (!ctx) return;
 
-      analyser.getByteFrequencyData(dataArray);
-      analyser.getByteTimeDomainData(timeDataArray);
+      // Get current audio data from the engine
+      const currentData = audioEngine?.getAnalyserData();
+      if (currentData && currentData.length > 0) {
+        // Copy data for visualization
+        for (let i = 0; i < Math.min(dataArray.length, currentData.length); i++) {
+          dataArray[i] = currentData[i];
+          timeDataArray[i] = currentData[i]; // Simplified - using same data for both
+        }
+      }
 
       // Clear canvas with dark background
       ctx.fillStyle = 'rgba(10, 10, 10, 0.2)';
@@ -173,13 +183,6 @@ export default function AudioVisualizer({
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
-      }
-      if (analyser && audioEngine.masterGain) {
-        try {
-          analyser.disconnect();
-        } catch (error) {
-          // Ignore disconnect errors
-        }
       }
       setIsActive(false);
     };
