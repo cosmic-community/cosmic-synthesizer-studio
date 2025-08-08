@@ -135,7 +135,7 @@ export interface RecordingState {
 // Drum sequencer types
 export interface DrumSoundConfig {
   name: string;
-  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'clap' | 'crash' | 'ride' | 'tom';
+  type: 'kick' | 'snare' | 'hihat' | 'openhat' | 'clap' | 'crash' | 'ride' | 'tom' | 'perc';
   frequency: number;
   decay: number;
   volume: number;
@@ -204,7 +204,7 @@ export interface PianoSoundConfig {
   effects: PianoEffects;
 }
 
-// Cosmic CMS types
+// Cosmic CMS types - Updated with proper interfaces
 export interface CosmicObject {
   id: string;
   title: string;
@@ -219,45 +219,72 @@ export interface CosmicResponse<T> {
   total: number;
 }
 
-// Preset types for Cosmic CMS
-export interface SynthPreset extends CosmicObject {
-  metadata: {
-    oscillator_type: string;
-    filter_cutoff: number;
-    filter_resonance: number;
-    envelope_attack: number;
-    envelope_decay: number;
-    envelope_sustain: number;
-    envelope_release: number;
-    effects: string[];
-    reverb_amount?: number;
-    delay_time?: number;
-    delay_feedback?: number;
-    distortion_amount?: number;
-    chorus_rate?: number;
-    chorus_depth?: number;
-  };
-}
-
-// Recording types for Cosmic CMS
+// Recording types for Cosmic CMS - Updated interface
 export interface Recording extends CosmicObject {
   metadata: {
+    title: string;
+    description?: string;
+    audio_file: {
+      url: string;
+      imgix_url: string;
+    };
     duration: number;
-    bpm: number;
-    waveform_data: number[];
-    social_shares: number;
-    tags: string[];
-    preset_used?: string;
+    genre?: {
+      key: string;
+      value: string;
+    };
+    recording_date?: string;
   };
 }
 
-// Drum pattern types for Cosmic CMS
+// Preset types for Cosmic CMS - Updated interface
+export interface SynthPreset extends CosmicObject {
+  metadata: {
+    name: string;
+    description?: string;
+    instrument_type: {
+      key: string;
+      value: string;
+    };
+    settings_data: {
+      oscillator_type?: string;
+      filter_cutoff?: number;
+      filter_resonance?: number;
+      envelope_attack?: number;
+      envelope_decay?: number;
+      envelope_sustain?: number;
+      envelope_release?: number;
+      effects?: string[];
+      reverb_amount?: number;
+      delay_time?: number;
+      delay_feedback?: number;
+      distortion_amount?: number;
+      chorus_rate?: number;
+      chorus_depth?: number;
+    };
+    tags?: string;
+  };
+}
+
+// Drum pattern types for Cosmic CMS - Updated interface
 export interface DrumPattern extends CosmicObject {
   metadata: {
+    pattern_name: string;
+    description: string;
     bpm: number;
-    steps: number;
-    pattern: boolean[][];
-    sounds: DrumSoundConfig[];
+    time_signature: {
+      key: string;
+      value: string;
+    };
+    pattern_data: {
+      steps: number;
+      tracks: Record<string, number[]>;
+      velocity: Record<string, number>;
+    };
+    style: {
+      key: string;
+      value: string;
+    };
   };
 }
 
@@ -296,6 +323,7 @@ export interface MIDIControlChange {
 
 // Project types
 export interface ProjectData {
+  id: string;
   name: string;
   bpm: number;
   synthState: SynthState;
@@ -304,6 +332,7 @@ export interface ProjectData {
   presets: SynthPreset[];
   created_at: string;
   modified_at: string;
+  lastModified: Date;
 }
 
 // Loop station types
@@ -393,4 +422,62 @@ export interface VoiceRecordingState {
   duration: number;
   audioLevel: number;
   recordedChunks: Blob[];
+}
+
+// Cloud sync types
+export interface CloudSyncItem {
+  id: string;
+  name: string;
+  type: 'preset' | 'recording' | 'pattern' | 'project';
+  size: string;
+  lastModified: Date;
+  status: 'synced' | 'pending' | 'error' | 'uploading' | 'downloading';
+  progress?: number;
+  localData?: any;
+  cloudData?: any;
+}
+
+// Export types
+export interface ExportFormat {
+  id: string;
+  name: string;
+  extension: string;
+  description: string;
+  quality: 'lossless' | 'high' | 'medium' | 'low';
+  size: 'large' | 'medium' | 'small';
+}
+
+export interface ExportJob {
+  id: string;
+  name: string;
+  format: ExportFormat;
+  status: 'pending' | 'processing' | 'completed' | 'error';
+  progress: number;
+  startTime: Date;
+  endTime?: Date;
+  fileSize?: string;
+  error?: string;
+}
+
+// Enhanced audio engine types
+export interface AudioEngineConfig {
+  sampleRate: number;
+  bufferSize: number;
+  latency: 'interactive' | 'balanced' | 'playback';
+  enableProcessing: boolean;
+}
+
+export interface AudioNodeChain {
+  input: AudioNode;
+  output: AudioNode;
+  nodes: AudioNode[];
+}
+
+// Performance monitoring types
+export interface PerformanceMetrics {
+  cpuUsage: number;
+  memoryUsage: number;
+  audioLatency: number;
+  dropouts: number;
+  activeVoices: number;
 }
