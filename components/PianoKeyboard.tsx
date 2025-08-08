@@ -180,6 +180,7 @@ export default function PianoKeyboard({
   const lastPlayedNote = useRef<string | null>(null);
   const activeVoices = useRef<Set<string>>(new Set());
   const keyRepeatTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const currentlyPlayingRef = useRef<Set<string>>(new Set()); // Track what's actually playing audio
 
   // Enhanced velocity calculation with mouse dynamics
   const calculateVelocity = useCallback((keyName: string, pressTime?: number, mouseVelocity?: number): number => {
@@ -225,6 +226,7 @@ export default function PianoKeyboard({
       if (frequency) {
         const shiftedFrequency = frequency * Math.pow(2, octaveShift);
         onKeyRelease(shiftedFrequency);
+        currentlyPlayingRef.current.delete(oldestKey);
       }
       
       activeVoices.current.delete(oldestKey);
@@ -266,7 +268,10 @@ export default function PianoKeyboard({
       // Apply octave shift
       const shiftedFrequency = frequency * Math.pow(2, octaveShift);
       const noteVelocity = forceVelocity ?? calculateVelocity(keyName, pressTime);
+      
+      // Start the audio note
       onKeyPress(shiftedFrequency, noteVelocity);
+      currentlyPlayingRef.current.add(keyName);
       lastPlayedNote.current = keyName;
     }
   }, [disabled, keyboardPressedKeys, allocateVoice, octaveShift, calculateVelocity, onKeyPress]);
@@ -274,7 +279,7 @@ export default function PianoKeyboard({
   const handleKeyUp = useCallback((keyName: string, fromKeyboard = false) => {
     if (disabled) return;
     
-    // Remove from pressed keys immediately
+    // Remove from pressed keys immediately (visual feedback)
     setPressedKeys(prev => {
       const newSet = new Set(prev);
       newSet.delete(keyName);
@@ -295,18 +300,32 @@ export default function PianoKeyboard({
       return newMap;
     });
     
-    // If sustain mode is on, move to sustained keys instead of releasing
-    if (sustainMode) {
-      sustainedKeys.current.add(keyName);
-      return; // Don't release the audio yet
+    // CRITICAL FIX: Always check if the note is actually playing before deciding what to do
+    const isCurrentlyPlaying = currentlyPlayingRef.current.has(keyName);
+    
+    if (!isCurrentlyPlaying) {
+      // Note isn't playing, nothing to do
+      return;
     }
     
-    // Release the audio note immediately if not in sustain mode
+    // If sustain mode is on, move to sustained keys instead of releasing immediately
+    if (sustainMode) {
+      sustainedKeys.current.add(keyName);
+      // Note: Don't release the audio yet, just add to sustained collection
+      return;
+    }
+    
+    // CRITICAL FIX: If not in sustain mode, immediately release the audio note
     releaseNote(keyName);
   }, [disabled, sustainMode]);
 
-  // Separate function to actually release a note (used by both handleKeyUp and sustain release)
+  // CRITICAL FIX: Separate function to actually release a note (used by both handleKeyUp and sustain release)
   const releaseNote = useCallback((keyName: string) => {
+    // Only release if the note is actually playing
+    if (!currentlyPlayingRef.current.has(keyName)) {
+      return;
+    }
+    
     // Release voice
     activeVoices.current.delete(keyName);
     setVoiceAllocation(prev => {
@@ -318,6 +337,9 @@ export default function PianoKeyboard({
     // Remove from sustained keys if present
     sustainedKeys.current.delete(keyName);
     
+    // Remove from currently playing tracking
+    currentlyPlayingRef.current.delete(keyName);
+    
     // Release the actual audio
     const frequency = keyFrequencies[keyName as keyof typeof keyFrequencies];
     if (frequency) {
@@ -326,14 +348,14 @@ export default function PianoKeyboard({
     }
   }, [octaveShift, onKeyRelease]);
 
-  // Handle sustain pedal toggle
+  // CRITICAL FIX: Handle sustain pedal toggle with proper note management
   const toggleSustain = useCallback(() => {
     setSustainMode(prev => {
       const newSustainMode = !prev;
       
-      // If turning OFF sustain, release all sustained keys
+      // If turning OFF sustain, release all sustained keys immediately
       if (!newSustainMode) {
-        // Release all sustained notes
+        // Release all notes that were being sustained
         const sustainedNotes = Array.from(sustainedKeys.current);
         sustainedNotes.forEach(keyName => {
           releaseNote(keyName);
@@ -347,14 +369,8 @@ export default function PianoKeyboard({
 
   // Release all keys - enhanced for polyphonic support
   const releaseAllKeys = useCallback(() => {
-    // Release all currently pressed keys
-    pressedKeys.forEach(keyName => {
-      releaseNote(keyName);
-    });
-    
-    // Release all sustained keys
-    const sustainedNotes = Array.from(sustainedKeys.current);
-    sustainedNotes.forEach(keyName => {
+    // Release all currently pressed keys (that are actually playing audio)
+    currentlyPlayingRef.current.forEach(keyName => {
       releaseNote(keyName);
     });
     
@@ -363,13 +379,14 @@ export default function PianoKeyboard({
     setKeyboardPressedKeys(new Set());
     sustainedKeys.current.clear();
     activeVoices.current.clear();
+    currentlyPlayingRef.current.clear();
     setVoiceAllocation(new Map());
     setSustainMode(false);
     
     // Clear any pending key repeat timeouts
     keyRepeatTimeouts.current.forEach(timeout => clearTimeout(timeout));
     keyRepeatTimeouts.current.clear();
-  }, [pressedKeys, releaseNote]);
+  }, [releaseNote]);
 
   // Enhanced keyboard event handling for better polyphony
   const handleKeyboardDown = useCallback((event: KeyboardEvent) => {
@@ -453,7 +470,7 @@ export default function PianoKeyboard({
     };
   }, [handleKeyboardDown, handleKeyboardUp, disabled]);
 
-  // Clear all pressed keys when component loses focus or window is not active
+  // CRITICAL FIX: Clear all pressed keys when component loses focus or window is not active
   useEffect(() => {
     const handleBlur = () => {
       releaseAllKeys();
@@ -573,12 +590,12 @@ export default function PianoKeyboard({
             <span className="text-sm text-slate-400">Voices:</span>
             <div className="flex items-center gap-1">
               <span className="text-sm text-cyan-400 font-mono">
-                {activeVoices.current.size}/{maxPolyphony}
+                {currentlyPlayingRef.current.size}/{maxPolyphony}
               </span>
               <div className="w-16 h-2 bg-slate-700 rounded-full overflow-hidden">
                 <div 
                   className="h-full bg-gradient-to-r from-green-500 via-yellow-500 to-red-500 transition-all duration-150"
-                  style={{ width: `${(activeVoices.current.size / maxPolyphony) * 100}%` }}
+                  style={{ width: `${(currentlyPlayingRef.current.size / maxPolyphony) * 100}%` }}
                 />
               </div>
             </div>
@@ -601,12 +618,12 @@ export default function PianoKeyboard({
             </span>
           </div>
 
-          {/* Sustain Toggle */}
+          {/* CRITICAL FIX: Enhanced Sustain Toggle with clear visual feedback */}
           <button
             onClick={toggleSustain}
             className={`px-3 py-1 rounded text-xs font-medium transition-all ${
               sustainMode
-                ? 'bg-cyan-600 text-white shadow-lg'
+                ? 'bg-amber-600 text-white shadow-lg ring-2 ring-amber-400'
                 : 'bg-slate-700 text-slate-300 hover:bg-slate-600'
             }`}
           >
@@ -623,7 +640,7 @@ export default function PianoKeyboard({
         </div>
 
         <div className="text-xs text-slate-400">
-          {pressedKeys.size} active
+          {currentlyPlayingRef.current.size} playing
           {sustainedKeys.current.size > 0 && ` • ${sustainedKeys.current.size} sustained`}
         </div>
       </div>
@@ -637,6 +654,7 @@ export default function PianoKeyboard({
         {whiteKeys.map((keyName, index) => {
           const isPressed = pressedKeys.has(keyName);
           const isSustained = sustainedKeys.current.has(keyName) && !pressedKeys.has(keyName);
+          const isPlaying = currentlyPlayingRef.current.has(keyName);
           const computerKeys = pianoToKeyboard[keyName] || [];
           
           return (
@@ -647,6 +665,8 @@ export default function PianoKeyboard({
                   ? 'bg-gradient-to-b from-cyan-400 to-cyan-600 shadow-lg transform scale-95'
                   : isSustained
                   ? 'bg-gradient-to-b from-amber-400 to-amber-600 shadow-lg transform scale-95'
+                  : isPlaying 
+                  ? 'bg-gradient-to-b from-green-400 to-green-600 shadow-lg transform scale-95'
                   : 'bg-gradient-to-b from-white to-gray-100 hover:from-gray-100 hover:to-gray-200 shadow-md'
               } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
               onMouseDown={() => {
@@ -675,7 +695,7 @@ export default function PianoKeyboard({
                 {showLabels && (
                   <>
                     <span className={`${config.fontSize} font-medium ${
-                      isPressed || isSustained ? 'text-white' : 'text-slate-600'
+                      isPressed || isSustained || isPlaying ? 'text-white' : 'text-slate-600'
                     }`}>
                       {keyName.replace(/[0-9]/g, '')}
                     </span>
@@ -685,7 +705,7 @@ export default function PianoKeyboard({
                           <span 
                             key={idx}
                             className={`text-xs px-1 py-0.5 rounded ${
-                              isPressed || isSustained
+                              isPressed || isSustained || isPlaying
                                 ? 'bg-white/20 text-white' 
                                 : 'bg-slate-200 text-slate-600'
                             }`}
@@ -707,6 +727,7 @@ export default function PianoKeyboard({
           {blackKeys.map((keyName) => {
             const isPressed = pressedKeys.has(keyName);
             const isSustained = sustainedKeys.current.has(keyName) && !pressedKeys.has(keyName);
+            const isPlaying = currentlyPlayingRef.current.has(keyName);
             const computerKeys = pianoToKeyboard[keyName] || [];
             
             return (
@@ -717,6 +738,8 @@ export default function PianoKeyboard({
                     ? 'bg-gradient-to-b from-cyan-500 to-cyan-700 shadow-lg transform scale-95'
                     : isSustained
                     ? 'bg-gradient-to-b from-amber-500 to-amber-700 shadow-lg transform scale-95'
+                    : isPlaying
+                    ? 'bg-gradient-to-b from-green-500 to-green-700 shadow-lg transform scale-95'
                     : 'bg-gradient-to-b from-slate-800 to-slate-900 hover:from-slate-700 hover:to-slate-800 shadow-lg'
                 } ${disabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
                 style={{ left: getBlackKeyPosition(keyName) }}
@@ -746,13 +769,13 @@ export default function PianoKeyboard({
                   {showLabels && (
                     <>
                       <span className={`text-xs font-medium ${
-                        isPressed || isSustained ? 'text-white' : 'text-gray-400'
+                        isPressed || isSustained || isPlaying ? 'text-white' : 'text-gray-400'
                       }`}>
                         {keyName.replace(/[0-9]/g, '').replace('#', '♯')}
                       </span>
                       {computerKeys.length > 0 && (
                         <span className={`text-xs px-1 py-0.5 rounded ${
-                          isPressed || isSustained
+                          isPressed || isSustained || isPlaying
                             ? 'bg-white/20 text-white' 
                             : 'bg-slate-600 text-gray-300'
                         }`}>
@@ -771,29 +794,29 @@ export default function PianoKeyboard({
       {/* Enhanced Help Text */}
       <div className="mt-4 text-center">
         <p className="text-xs text-slate-400">
-          Enhanced polyphonic support • Up to {maxPolyphony} simultaneous notes • Multiple keyboard layers
+          Enhanced polyphonic support • Up to {maxPolyphony} simultaneous notes • Proper sustain control
         </p>
         <p className="text-xs text-slate-500 mt-1">
-          Shift+Z/X: Octave • Shift+C: Sustain • Shift+Space: Release all • Voice stealing when limit reached
+          Shift+Z/X: Octave • Shift+C: Sustain • Shift+Space: Release all • Keys release immediately when let go (unless sustain is on)
         </p>
       </div>
 
-      {/* Enhanced Active Keys Display */}
-      {(pressedKeys.size > 0 || sustainedKeys.current.size > 0) && (
+      {/* Enhanced Active Keys Display with clearer sustain indication */}
+      {(currentlyPlayingRef.current.size > 0 || sustainedKeys.current.size > 0) && (
         <div className="mt-2 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1 bg-slate-700/50 rounded-lg">
-            {pressedKeys.size > 0 && (
+            {currentlyPlayingRef.current.size > 0 && (
               <>
-                <span className="text-xs text-cyan-400">Playing ({pressedKeys.size}):</span>
+                <span className="text-xs text-green-400">Playing ({currentlyPlayingRef.current.size}):</span>
                 <span className="text-xs text-white font-mono">
-                  {Array.from(pressedKeys).slice(0, 6).join(', ')}
-                  {pressedKeys.size > 6 && `... +${pressedKeys.size - 6}`}
+                  {Array.from(currentlyPlayingRef.current).slice(0, 6).join(', ')}
+                  {currentlyPlayingRef.current.size > 6 && `... +${currentlyPlayingRef.current.size - 6}`}
                 </span>
               </>
             )}
             {sustainedKeys.current.size > 0 && (
               <>
-                {pressedKeys.size > 0 && <span className="text-slate-500">•</span>}
+                {currentlyPlayingRef.current.size > 0 && <span className="text-slate-500">•</span>}
                 <span className="text-xs text-amber-400">Sustained ({sustainedKeys.current.size}):</span>
                 <span className="text-xs text-amber-200 font-mono">
                   {Array.from(sustainedKeys.current).slice(0, 4).join(', ')}
@@ -806,10 +829,19 @@ export default function PianoKeyboard({
       )}
 
       {/* Voice allocation indicator */}
-      {activeVoices.current.size > maxPolyphony * 0.8 && (
+      {currentlyPlayingRef.current.size > maxPolyphony * 0.8 && (
         <div className="mt-2 text-center">
           <div className="inline-flex items-center gap-2 px-2 py-1 bg-yellow-600/20 border border-yellow-600/50 rounded text-xs text-yellow-400">
             ⚠️ High polyphony usage - voice stealing may occur
+          </div>
+        </div>
+      )}
+
+      {/* CRITICAL FIX: Sustain mode indicator */}
+      {sustainMode && (
+        <div className="mt-2 text-center">
+          <div className="inline-flex items-center gap-2 px-2 py-1 bg-amber-600/20 border border-amber-600/50 rounded text-xs text-amber-400">
+            🎹 Sustain Mode Active - Keys will hold until sustain is turned off
           </div>
         </div>
       )}

@@ -23,6 +23,8 @@ export class AudioEngine {
     velocity: number;
     noteId: string;
     priority: number;
+    releaseStarted?: boolean; // CRITICAL FIX: Track if release has started
+    sustainPedal?: boolean; // CRITICAL FIX: Track if note was affected by sustain
   }> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
@@ -273,14 +275,14 @@ export class AudioEngine {
     const noteId = `note_${this.noteIdCounter++}`;
     const priority = this.calculateNotePriority(frequency, velocity);
     
+    // CRITICAL FIX: Stop existing note if playing same frequency to prevent stuck notes
+    if (this.activeNotes.has(noteKey)) {
+      this.stopNote(frequency);
+    }
+
     // Enhanced voice management with priority system
     if (this.activeNotes.size >= this.maxPolyphony && this.voiceStealingEnabled) {
       this.stealVoiceWithPriority(priority);
-    }
-
-    // Stop existing note if playing same frequency (monophonic behavior on same frequency)
-    if (this.activeNotes.has(noteKey) && !this.polyphonicMode) {
-      this.stopNote(frequency);
     }
 
     try {
@@ -382,7 +384,7 @@ export class AudioEngine {
       // Start all oscillators
       oscillators.forEach(osc => osc.start(now));
 
-      // Store active note with enhanced metadata
+      // CRITICAL FIX: Store active note with enhanced metadata including release tracking
       this.activeNotes.set(noteKey, { 
         oscillators, 
         envelope,
@@ -391,7 +393,9 @@ export class AudioEngine {
         startTime: now,
         velocity,
         noteId,
-        priority
+        priority,
+        releaseStarted: false, // Track if release has started
+        sustainPedal: false   // Track if affected by sustain pedal
       });
 
       // Track voice usage with priority
@@ -538,14 +542,14 @@ export class AudioEngine {
     const noteId = `piano_${this.noteIdCounter++}`;
     const priority = this.calculateNotePriority(frequency, velocity) + 100; // Piano gets slight priority boost
     
+    // CRITICAL FIX: Stop existing note if playing same frequency to prevent stuck notes
+    if (this.activeNotes.has(noteKey)) {
+      this.stopNote(frequency);
+    }
+
     // Enhanced voice management
     if (this.activeNotes.size >= this.maxPolyphony && this.voiceStealingEnabled) {
       this.stealVoiceWithPriority(priority);
-    }
-
-    // Stop existing note if playing same frequency
-    if (this.activeNotes.has(noteKey) && !this.polyphonicMode) {
-      this.stopNote(frequency);
     }
 
     try {
@@ -632,7 +636,7 @@ export class AudioEngine {
       // Start all oscillators
       oscillators.forEach(osc => osc.start(now));
 
-      // Store active note with enhanced metadata
+      // CRITICAL FIX: Store active note with enhanced metadata including release tracking
       this.activeNotes.set(noteKey, { 
         oscillators, 
         envelope, 
@@ -640,7 +644,9 @@ export class AudioEngine {
         startTime: now,
         velocity,
         noteId,
-        priority
+        priority,
+        releaseStarted: false, // Track if release has started
+        sustainPedal: false   // Track if affected by sustain pedal
       });
 
       this.voiceManager.set(noteKey, { time: now, priority });
@@ -729,6 +735,7 @@ export class AudioEngine {
     }
   }
 
+  // CRITICAL FIX: Enhanced stop note with proper release handling
   public stopNote(frequency: number): void {
     if (!this.isInitialized || !this.audioContext) return;
 
@@ -737,38 +744,52 @@ export class AudioEngine {
 
     if (activeNote) {
       try {
+        // CRITICAL FIX: Prevent double-release
+        if (activeNote.releaseStarted) {
+          return;
+        }
+        
+        // Mark release as started
+        activeNote.releaseStarted = true;
+
         const { oscillators, envelope } = activeNote;
         const now = this.audioContext.currentTime;
 
-        // Enhanced release time based on current envelope level
+        // Enhanced release time based on current envelope level and note type
         const currentGain = envelope.gain.value;
-        const releaseTime = Math.max(0.05, Math.min(1.0, currentGain * 2)); // Adaptive release
+        let releaseTime = Math.max(0.03, Math.min(0.8, currentGain * 1.5)); // Faster default release
 
-        // Apply enhanced release with smooth fade
+        // CRITICAL FIX: Use proper exponential release for musical feel
         envelope.gain.cancelScheduledValues(now);
-        envelope.gain.setValueAtTime(envelope.gain.value, now);
+        envelope.gain.setValueAtTime(Math.max(envelope.gain.value, 0.001), now);
         envelope.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
 
-        // Stop all oscillators after release with fade out
+        // CRITICAL FIX: Stop all oscillators after release with proper timing
+        const stopTime = now + releaseTime + 0.05; // Small buffer for envelope completion
+        
         setTimeout(() => {
           try {
             oscillators.forEach(osc => {
               if (osc.context.state !== 'closed') {
                 try {
-                  osc.stop();
+                  osc.stop(stopTime);
                 } catch (stopError) {
                   // Oscillator might already be stopped
+                  console.debug('Oscillator already stopped:', stopError);
                 }
               }
             });
           } catch (e) {
-            // Oscillators might already be stopped
+            console.debug('Error stopping oscillators:', e);
           }
-        }, releaseTime * 1000 + 50); // Small buffer to ensure envelope completes
+          
+          // Clean up after audio has stopped
+          setTimeout(() => {
+            this.activeNotes.delete(noteKey);
+            this.voiceManager.delete(noteKey);
+          }, 100);
+        }, 10); // Start stop process almost immediately
 
-        // Clean up immediately from tracking
-        this.activeNotes.delete(noteKey);
-        this.voiceManager.delete(noteKey);
       } catch (error) {
         console.error('Error stopping note:', error);
         // Always clean up tracking even if stopping fails
