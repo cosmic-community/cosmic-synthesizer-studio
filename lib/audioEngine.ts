@@ -735,7 +735,7 @@ export class AudioEngine {
     }
   }
 
-  // CRITICAL FIX: Enhanced stop note with proper release handling
+  // CRITICAL FIX: Enhanced stop note with immediate release
   public stopNote(frequency: number): void {
     if (!this.isInitialized || !this.audioContext) return;
 
@@ -755,9 +755,8 @@ export class AudioEngine {
         const { oscillators, envelope } = activeNote;
         const now = this.audioContext.currentTime;
 
-        // Enhanced release time based on current envelope level and note type
-        const currentGain = envelope.gain.value;
-        let releaseTime = Math.max(0.03, Math.min(0.8, currentGain * 1.5)); // Faster default release
+        // CRITICAL FIX: Use very fast release for immediate response
+        const releaseTime = 0.05; // Very fast release (50ms)
 
         // CRITICAL FIX: Use proper exponential release for musical feel
         envelope.gain.cancelScheduledValues(now);
@@ -765,8 +764,9 @@ export class AudioEngine {
         envelope.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
 
         // CRITICAL FIX: Stop all oscillators after release with proper timing
-        const stopTime = now + releaseTime + 0.05; // Small buffer for envelope completion
+        const stopTime = now + releaseTime + 0.01; // Very small buffer for envelope completion
         
+        // Stop oscillators immediately after release
         setTimeout(() => {
           try {
             oscillators.forEach(osc => {

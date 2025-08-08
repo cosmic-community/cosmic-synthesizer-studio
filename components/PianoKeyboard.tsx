@@ -300,7 +300,7 @@ export default function PianoKeyboard({
       return newMap;
     });
     
-    // CRITICAL FIX: Always check if the note is actually playing before deciding what to do
+    // CRITICAL FIX: Always release the note immediately unless sustain mode is on
     const isCurrentlyPlaying = currentlyPlayingRef.current.has(keyName);
     
     if (!isCurrentlyPlaying) {
@@ -340,7 +340,7 @@ export default function PianoKeyboard({
     // Remove from currently playing tracking
     currentlyPlayingRef.current.delete(keyName);
     
-    // Release the actual audio
+    // CRITICAL FIX: Release the actual audio immediately
     const frequency = keyFrequencies[keyName as keyof typeof keyFrequencies];
     if (frequency) {
       const shiftedFrequency = frequency * Math.pow(2, octaveShift);
@@ -794,10 +794,10 @@ export default function PianoKeyboard({
       {/* Enhanced Help Text */}
       <div className="mt-4 text-center">
         <p className="text-xs text-slate-400">
-          Enhanced polyphonic support • Up to {maxPolyphony} simultaneous notes • Proper sustain control
+          Enhanced polyphonic support • Up to {maxPolyphony} simultaneous notes • Instant note release
         </p>
         <p className="text-xs text-slate-500 mt-1">
-          Shift+Z/X: Octave • Shift+C: Sustain • Shift+Space: Release all • Keys release immediately when let go (unless sustain is on)
+          Shift+Z/X: Octave • Shift+C: Sustain • Shift+Space: Release all • Notes stop immediately when released (unless sustain is on)
         </p>
       </div>
 
