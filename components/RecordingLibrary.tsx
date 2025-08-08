@@ -24,7 +24,6 @@ import {
   X,
   Upload,
   Volume2,
-  Waveform,
   Calendar,
   User,
   Headphones,
