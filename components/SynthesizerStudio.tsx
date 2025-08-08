@@ -333,7 +333,7 @@ export default function SynthesizerStudio() {
   if (!isInitialized && error) {
     return (
       <div className="max-w-4xl mx-auto p-6">
-        <div className="text-center p-8 bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700">
+        <div className="text-center p-8 glass-panel rounded-2xl border border-slate-700">
           <AlertTriangle className="w-16 h-16 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-bold text-white mb-2">Audio Engine Error</h2>
           <p className="text-red-400 mb-6 max-w-md mx-auto">{error}</p>
@@ -446,7 +446,7 @@ export default function SynthesizerStudio() {
               <Mic className="w-5 h-5" />
             </button>
 
-            <div className="flex items-center gap-2 px-3 py-2 bg-slate-700/50 rounded-lg">
+            <div className="flex items-center gap-2 px-3 py-2 glass-panel rounded-lg">
               <span className="text-sm text-slate-300">BPM:</span>
               <input
                 type="number"

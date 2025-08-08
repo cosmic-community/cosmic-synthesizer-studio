@@ -279,9 +279,9 @@ export default function DrumPatternLibrary({
   ];
 
   return (
-    <div className="bg-synth-panel rounded-lg p-6">
+    <div className="glass-panel rounded-xl p-6">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-synth-accent flex items-center gap-2">
+        <h3 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
           <Library className="w-5 h-5" />
           Pattern Library
         </h3>
@@ -289,7 +289,7 @@ export default function DrumPatternLibrary({
         <div className="flex items-center gap-2">
           <button
             onClick={() => setShowFilters(!showFilters)}
-            className={`synth-button-small flex items-center gap-1 ${showFilters ? 'bg-synth-accent text-black' : ''}`}
+            className={`btn-secondary flex items-center gap-1 ${showFilters ? 'bg-cyan-500 text-black' : ''}`}
           >
             <Filter className="w-3 h-3" />
             Filters
@@ -298,7 +298,7 @@ export default function DrumPatternLibrary({
           {onSaveCurrentPattern && (
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="synth-button-small flex items-center gap-1"
+              className="btn-secondary flex items-center gap-1"
             >
               <Save className="w-3 h-3" />
               Save Current
@@ -308,7 +308,7 @@ export default function DrumPatternLibrary({
           <button
             onClick={refreshPatterns}
             disabled={loading}
-            className="synth-button-small"
+            className="btn-secondary"
           >
             {loading ? 'Loading...' : 'Refresh'}
           </button>
@@ -319,27 +319,27 @@ export default function DrumPatternLibrary({
       <div className="space-y-4 mb-6">
         {/* Search */}
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             placeholder="Search patterns..."
-            className="w-full bg-synth-control border border-gray-600 rounded-lg pl-10 pr-4 py-2 text-white placeholder-gray-400"
+            className="w-full bg-slate-700/50 border border-slate-600 rounded-lg pl-10 pr-4 py-2 text-white placeholder-slate-400"
           />
         </div>
 
         {/* Advanced Filters */}
         {showFilters && (
-          <div className="bg-synth-control rounded-lg p-4 border border-gray-600">
+          <div className="glass-panel rounded-lg p-4 border border-slate-600">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               {/* Style Filter */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Style</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Style</label>
                 <select
                   value={selectedStyle}
                   onChange={(e) => setSelectedStyle(e.target.value)}
-                  className="w-full bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white"
                 >
                   {styles.map(style => (
                     <option key={style.key} value={style.key}>{style.value}</option>
@@ -349,7 +349,7 @@ export default function DrumPatternLibrary({
 
               {/* BPM Range */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   BPM Range: {bpmRange.min} - {bpmRange.max}
                 </label>
                 <div className="flex gap-2">
@@ -359,7 +359,7 @@ export default function DrumPatternLibrary({
                     max="200"
                     value={bpmRange.min}
                     onChange={(e) => setBpmRange(prev => ({ ...prev, min: parseInt(e.target.value) }))}
-                    className="flex-1"
+                    className="flex-1 slider-modern"
                   />
                   <input
                     type="range"
@@ -367,19 +367,19 @@ export default function DrumPatternLibrary({
                     max="200"
                     value={bpmRange.max}
                     onChange={(e) => setBpmRange(prev => ({ ...prev, max: parseInt(e.target.value) }))}
-                    className="flex-1"
+                    className="flex-1 slider-modern"
                   />
                 </div>
               </div>
 
               {/* Sort Options */}
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">Sort By</label>
+                <label className="block text-sm font-medium text-slate-300 mb-2">Sort By</label>
                 <div className="flex gap-2">
                   <select
                     value={sortBy}
                     onChange={(e) => setSortBy(e.target.value as any)}
-                    className="flex-1 bg-gray-700 border border-gray-600 rounded px-3 py-2 text-white"
+                    className="flex-1 bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white"
                   >
                     <option value="name">Name</option>
                     <option value="bpm">BPM</option>
@@ -388,7 +388,7 @@ export default function DrumPatternLibrary({
                   </select>
                   <button
                     onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-                    className="px-3 py-2 bg-gray-700 border border-gray-600 rounded text-white hover:bg-gray-600"
+                    className="px-3 py-2 bg-slate-700/50 border border-slate-600 rounded text-white hover:bg-slate-600"
                   >
                     {sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                   </button>
@@ -402,26 +402,26 @@ export default function DrumPatternLibrary({
       {/* Pattern Grid */}
       {loading ? (
         <div className="text-center py-8">
-          <div className="w-8 h-8 border-2 border-synth-accent border-t-transparent rounded-full animate-spin mx-auto mb-2" />
-          <p className="text-gray-400">Loading patterns...</p>
+          <div className="w-8 h-8 border-2 border-cyan-400 border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+          <p className="text-slate-400">Loading patterns...</p>
         </div>
       ) : error ? (
         <div className="text-center py-8">
           <p className="text-red-400 mb-2">Error: {error}</p>
-          <button onClick={refreshPatterns} className="synth-button">
+          <button onClick={refreshPatterns} className="btn-primary">
             Try Again
           </button>
         </div>
       ) : sortedPatterns.length === 0 ? (
         <div className="text-center py-8">
-          <Music className="w-12 h-12 text-gray-600 mx-auto mb-4" />
-          <p className="text-gray-400">
+          <Music className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+          <p className="text-slate-400">
             {searchTerm || selectedStyle !== 'all' ? 'No patterns match your filters.' : 'No patterns found.'}
           </p>
           {onSaveCurrentPattern && (
             <button
               onClick={() => setShowSaveDialog(true)}
-              className="synth-button mt-4"
+              className="btn-primary mt-4"
             >
               Save Your First Pattern
             </button>
@@ -432,16 +432,16 @@ export default function DrumPatternLibrary({
           {sortedPatterns.map((pattern) => (
             <div
               key={pattern.id}
-              className="bg-synth-control rounded-lg p-4 border border-gray-600 hover:border-synth-accent transition-colors"
+              className="glass-panel rounded-lg p-4 border border-slate-600 hover:border-cyan-400 transition-colors"
             >
               <div className="flex items-start justify-between mb-3">
                 <div className="flex-1 min-w-0">
                   <h4 className="font-semibold text-white truncate">{pattern.title}</h4>
-                  <p className="text-sm text-gray-400 truncate">{pattern.metadata.description}</p>
+                  <p className="text-sm text-slate-400 truncate">{pattern.metadata.description}</p>
                 </div>
                 <button
                   onClick={() => toggleFavorite(pattern.id)}
-                  className="ml-2 text-gray-400 hover:text-yellow-400 transition-colors"
+                  className="ml-2 text-slate-400 hover:text-yellow-400 transition-colors"
                 >
                   {favorites.has(pattern.id) ? (
                     <Star className="w-4 h-4 fill-current text-yellow-400" />
@@ -451,7 +451,7 @@ export default function DrumPatternLibrary({
                 </button>
               </div>
 
-              <div className="flex items-center gap-4 text-xs text-gray-400 mb-3">
+              <div className="flex items-center gap-4 text-xs text-slate-400 mb-3">
                 <div className="flex items-center gap-1">
                   <Clock className="w-3 h-3" />
                   {pattern.metadata.bpm} BPM
@@ -470,7 +470,7 @@ export default function DrumPatternLibrary({
                 <div className="flex gap-1">
                   <button
                     onClick={() => onPatternLoad(pattern)}
-                    className="synth-button-small flex items-center gap-1"
+                    className="btn-secondary flex items-center gap-1"
                   >
                     <Download className="w-3 h-3" />
                     Load
@@ -479,7 +479,7 @@ export default function DrumPatternLibrary({
                   {audioEngine && (
                     <button
                       onClick={() => previewPattern(pattern)}
-                      className={`synth-button-small flex items-center gap-1 ${previewingPattern === pattern.id ? 'bg-synth-accent text-black' : ''}`}
+                      className={`btn-secondary flex items-center gap-1 ${previewingPattern === pattern.id ? 'bg-cyan-500 text-black' : ''}`}
                     >
                       <Play className="w-3 h-3" />
                       {previewingPattern === pattern.id ? 'Playing' : 'Preview'}
@@ -490,7 +490,7 @@ export default function DrumPatternLibrary({
                 <div className="flex gap-1">
                   <button
                     onClick={() => copyPatternData(pattern)}
-                    className="synth-button-small p-1"
+                    className="btn-secondary p-1"
                     title="Copy pattern data"
                   >
                     <Copy className="w-3 h-3" />
@@ -498,7 +498,7 @@ export default function DrumPatternLibrary({
                   
                   <button
                     onClick={() => sharePattern(pattern)}
-                    className="synth-button-small p-1"
+                    className="btn-secondary p-1"
                     title="Share pattern"
                   >
                     <Share2 className="w-3 h-3" />
@@ -506,7 +506,7 @@ export default function DrumPatternLibrary({
 
                   <button
                     onClick={() => deletePattern(pattern.id)}
-                    className="synth-button-small p-1 hover:bg-red-600"
+                    className="btn-secondary p-1 hover:bg-red-600"
                     title="Delete pattern"
                   >
                     <Trash2 className="w-3 h-3" />
@@ -521,12 +521,12 @@ export default function DrumPatternLibrary({
       {/* Save Pattern Dialog */}
       {showSaveDialog && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-synth-panel rounded-lg p-6 w-full max-w-md border border-gray-600">
+          <div className="glass-panel rounded-lg p-6 w-full max-w-md border border-slate-600">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-semibold text-white">Save Pattern</h3>
               <button
                 onClick={() => setShowSaveDialog(false)}
-                className="text-gray-400 hover:text-white"
+                className="text-slate-400 hover:text-white"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -534,7 +534,7 @@ export default function DrumPatternLibrary({
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Pattern Name *
                 </label>
                 <input
@@ -542,12 +542,12 @@ export default function DrumPatternLibrary({
                   value={saveDialogData.name}
                   onChange={(e) => setSaveDialogData(prev => ({ ...prev, name: e.target.value }))}
                   placeholder="Enter pattern name..."
-                  className="w-full bg-synth-control border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-400"
+                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Description
                 </label>
                 <textarea
@@ -555,18 +555,18 @@ export default function DrumPatternLibrary({
                   onChange={(e) => setSaveDialogData(prev => ({ ...prev, description: e.target.value }))}
                   placeholder="Describe your pattern..."
                   rows={3}
-                  className="w-full bg-synth-control border border-gray-600 rounded px-3 py-2 text-white placeholder-gray-400 resize-none"
+                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white placeholder-slate-400 resize-none"
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-300 mb-2">
+                <label className="block text-sm font-medium text-slate-300 mb-2">
                   Style
                 </label>
                 <select
                   value={saveDialogData.style}
                   onChange={(e) => setSaveDialogData(prev => ({ ...prev, style: e.target.value }))}
-                  className="w-full bg-synth-control border border-gray-600 rounded px-3 py-2 text-white"
+                  className="w-full bg-slate-700/50 border border-slate-600 rounded px-3 py-2 text-white"
                 >
                   {styles.slice(1).map(style => (
                     <option key={style.key} value={style.key}>{style.value}</option>
@@ -578,14 +578,14 @@ export default function DrumPatternLibrary({
             <div className="flex gap-3 mt-6">
               <button
                 onClick={() => setShowSaveDialog(false)}
-                className="flex-1 px-4 py-2 bg-gray-700 text-white rounded hover:bg-gray-600 transition-colors"
+                className="flex-1 px-4 py-2 bg-slate-700/50 text-white rounded hover:bg-slate-600 transition-colors"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSavePattern}
                 disabled={!saveDialogData.name.trim()}
-                className="flex-1 px-4 py-2 bg-synth-accent text-black rounded hover:bg-synth-info transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 px-4 py-2 bg-cyan-500 text-black rounded hover:bg-cyan-400 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Save Pattern
               </button>

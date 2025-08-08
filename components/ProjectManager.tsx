@@ -124,9 +124,9 @@ export default function ProjectManager() {
   };
 
   return (
-    <div className="h-full flex flex-col bg-synth-panel">
+    <div className="h-full flex flex-col glass-panel">
       {/* Header */}
-      <div className="p-4 border-b border-gray-700">
+      <div className="p-4 border-b border-slate-700">
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-semibold text-white flex items-center gap-2">
             <FolderOpen className="w-5 h-5" />
@@ -135,14 +135,14 @@ export default function ProjectManager() {
           <div className="flex gap-2">
             <button
               onClick={() => setShowNewProjectDialog(true)}
-              className="synth-button flex items-center gap-2"
+              className="btn-primary flex items-center gap-2"
             >
               <Plus className="w-4 h-4" />
               New
             </button>
             <button
               onClick={saveCurrentProject}
-              className="synth-button flex items-center gap-2"
+              className="btn-primary flex items-center gap-2"
               disabled={!currentProject}
             >
               <Save className="w-4 h-4" />
@@ -153,11 +153,11 @@ export default function ProjectManager() {
 
         {/* Current Project Info */}
         {currentProject && (
-          <div className="bg-synth-control rounded-lg p-3">
+          <div className="glass-panel rounded-lg p-3">
             <div className="flex items-center justify-between">
               <div>
                 <h4 className="text-white font-medium">{currentProject.name}</h4>
-                <div className="text-sm text-gray-400 flex items-center gap-3">
+                <div className="text-sm text-slate-400 flex items-center gap-3">
                   <span>{formatDuration(currentProject.duration)}</span>
                   <span>{currentProject.tracks} tracks</span>
                   <span>{currentProject.bpm} BPM</span>
@@ -167,7 +167,7 @@ export default function ProjectManager() {
               <div className="flex gap-2">
                 <button
                   onClick={() => exportProject(currentProject)}
-                  className="synth-button-small"
+                  className="btn-secondary"
                 >
                   <Download className="w-4 h-4" />
                 </button>
@@ -185,15 +185,15 @@ export default function ProjectManager() {
               key={project.id}
               className={`rounded-lg border cursor-pointer transition-colors ${
                 currentProject?.id === project.id
-                  ? 'bg-synth-accent/20 border-synth-accent'
-                  : 'bg-synth-control border-gray-600 hover:border-synth-accent/50'
+                  ? 'bg-cyan-400/20 border-cyan-400'
+                  : 'glass-panel border-slate-600 hover:border-cyan-400/50'
               }`}
               onClick={() => loadProject(project)}
             >
               <div className="p-3">
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <Music className="w-4 h-4 text-synth-accent" />
+                    <Music className="w-4 h-4 text-cyan-400" />
                     <h4 className="text-white font-medium">{project.name}</h4>
                   </div>
                   <button
@@ -201,13 +201,13 @@ export default function ProjectManager() {
                       e.stopPropagation();
                       deleteProject(project.id);
                     }}
-                    className="text-gray-400 hover:text-red-400 transition-colors"
+                    className="text-slate-400 hover:text-red-400 transition-colors"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
                 
-                <div className="flex items-center justify-between text-sm text-gray-400">
+                <div className="flex items-center justify-between text-sm text-slate-400">
                   <div className="flex items-center gap-3">
                     <span>{formatDuration(project.duration)}</span>
                     <span>{project.tracks} tracks</span>
@@ -220,7 +220,7 @@ export default function ProjectManager() {
                   </div>
                 </div>
                 
-                <div className="flex items-center justify-between text-xs text-gray-500 mt-1">
+                <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
                   <span>{project.size}</span>
                 </div>
               </div>
@@ -232,18 +232,18 @@ export default function ProjectManager() {
       {/* New Project Dialog */}
       {showNewProjectDialog && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div className="bg-synth-panel rounded-lg p-6 w-96 border border-gray-700">
+          <div className="glass-panel rounded-lg p-6 w-96 border border-slate-700">
             <h3 className="text-lg font-semibold text-white mb-4">New Project</h3>
             
             <div className="space-y-4">
               <div>
-                <label className="block text-sm text-gray-400 mb-2">Project Name</label>
+                <label className="block text-sm text-slate-400 mb-2">Project Name</label>
                 <input
                   type="text"
                   value={newProjectName}
                   onChange={(e) => setNewProjectName(e.target.value)}
                   placeholder="Enter project name..."
-                  className="w-full px-3 py-2 bg-synth-control border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-synth-accent focus:outline-none"
+                  className="w-full px-3 py-2 bg-slate-700/50 border border-slate-600 rounded-lg text-white placeholder-slate-400 focus:border-cyan-400 focus:outline-none"
                   autoFocus
                   onKeyPress={(e) => {
                     if (e.key === 'Enter') {
@@ -259,14 +259,14 @@ export default function ProjectManager() {
                     setShowNewProjectDialog(false);
                     setNewProjectName('');
                   }}
-                  className="px-4 py-2 text-gray-400 hover:text-white transition-colors"
+                  className="px-4 py-2 text-slate-400 hover:text-white transition-colors"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={createNewProject}
                   disabled={!newProjectName.trim()}
-                  className="synth-button"
+                  className="btn-primary"
                 >
                   Create
                 </button>
@@ -277,10 +277,10 @@ export default function ProjectManager() {
       )}
 
       {/* Footer */}
-      <div className="p-4 border-t border-gray-700">
-        <div className="flex items-center justify-between text-sm text-gray-400">
+      <div className="p-4 border-t border-slate-700">
+        <div className="flex items-center justify-between text-sm text-slate-400">
           <span>{projects.length} projects</span>
-          <button className="flex items-center gap-2 text-synth-accent hover:text-synth-accent/80">
+          <button className="flex items-center gap-2 text-cyan-400 hover:text-cyan-300">
             <Upload className="w-4 h-4" />
             Import
           </button>

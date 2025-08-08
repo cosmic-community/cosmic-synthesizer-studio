@@ -194,9 +194,9 @@ export default function MixerConsole() {
       <div
         key={channel.id}
         className={clsx(
-          'bg-synth-control rounded-lg p-3 space-y-3 transition-all duration-200',
-          'border border-gray-700 hover:border-gray-600',
-          mixerState.selectedChannel === channel.id && 'ring-2 ring-synth-accent ring-opacity-50',
+          'glass-panel rounded-lg p-3 space-y-3 transition-all duration-200',
+          'border border-slate-700 hover:border-slate-600',
+          mixerState.selectedChannel === channel.id && 'ring-2 ring-cyan-400 ring-opacity-50',
           !isAudible && 'opacity-60'
         )}
         style={{ borderTopColor: channel.color }}
@@ -213,15 +213,15 @@ export default function MixerConsole() {
             {channel.type === 'bus' && <Filter className="w-3 h-3" />}
             <span className="text-xs font-bold text-white">{channel.name}</span>
           </div>
-          <div className="text-xs text-gray-400">{channel.type.toUpperCase()}</div>
+          <div className="text-xs text-slate-400">{channel.type.toUpperCase()}</div>
         </div>
 
         {/* EQ Section */}
         <div className="space-y-1">
-          <div className="text-xs text-gray-400 text-center">EQ</div>
+          <div className="text-xs text-slate-400 text-center">EQ</div>
           {(['high', 'mid', 'low'] as const).map((band) => (
             <div key={band} className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 w-8 uppercase">{band}</span>
+              <span className="text-xs text-slate-400 w-8 uppercase">{band}</span>
               <input
                 type="range"
                 min="-12"
@@ -231,7 +231,7 @@ export default function MixerConsole() {
                 onChange={(e) => updateChannel(channel.id, {
                   eq: { ...channel.eq, [band]: Number(e.target.value) }
                 })}
-                className="flex-1 h-1 bg-synth-bg rounded-lg appearance-none cursor-pointer"
+                className="flex-1 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-modern"
                 style={{
                   background: `linear-gradient(to right, #374151 0%, #374151 ${((channel.eq[band] + 12) / 24) * 100}%, ${channel.color} ${((channel.eq[band] + 12) / 24) * 100}%, ${channel.color} 100%)`
                 }}
@@ -245,10 +245,10 @@ export default function MixerConsole() {
 
         {/* Send Section */}
         <div className="space-y-1">
-          <div className="text-xs text-gray-400 text-center">SENDS</div>
+          <div className="text-xs text-slate-400 text-center">SENDS</div>
           {(['reverb', 'delay'] as const).map((send) => (
             <div key={send} className="flex items-center gap-2">
-              <span className="text-xs text-gray-400 w-8 uppercase">{send.slice(0,3)}</span>
+              <span className="text-xs text-slate-400 w-8 uppercase">{send.slice(0,3)}</span>
               <input
                 type="range"
                 min="0"
@@ -258,7 +258,7 @@ export default function MixerConsole() {
                 onChange={(e) => updateChannel(channel.id, {
                   sends: { ...channel.sends, [send]: Number(e.target.value) }
                 })}
-                className="flex-1 h-1 bg-synth-bg rounded-lg appearance-none cursor-pointer"
+                className="flex-1 h-1 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-modern"
                 style={{
                   background: `linear-gradient(to right, #374151 0%, #374151 ${channel.sends[send] * 100}%, ${channel.color} ${channel.sends[send] * 100}%, ${channel.color} 100%)`
                 }}
@@ -272,9 +272,9 @@ export default function MixerConsole() {
 
         {/* Pan Control */}
         <div className="space-y-1">
-          <div className="text-xs text-gray-400 text-center">PAN</div>
+          <div className="text-xs text-slate-400 text-center">PAN</div>
           <div className="flex items-center gap-2">
-            <span className="text-xs text-gray-400">L</span>
+            <span className="text-xs text-slate-400">L</span>
             <input
               type="range"
               min="-1"
@@ -282,9 +282,9 @@ export default function MixerConsole() {
               step="0.01"
               value={channel.pan}
               onChange={(e) => updateChannel(channel.id, { pan: Number(e.target.value) })}
-              className="flex-1 h-2 bg-synth-bg rounded-lg appearance-none cursor-pointer"
+              className="flex-1 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-modern"
             />
-            <span className="text-xs text-gray-400">R</span>
+            <span className="text-xs text-slate-400">R</span>
           </div>
           <div className="text-xs text-center text-white">
             {channel.pan === 0 ? 'C' : channel.pan > 0 ? `R${Math.round(channel.pan * 100)}` : `L${Math.round(Math.abs(channel.pan) * 100)}`}
@@ -293,11 +293,11 @@ export default function MixerConsole() {
 
         {/* Level Meter and Fader */}
         <div className="space-y-2">
-          <div className="text-xs text-gray-400 text-center">LEVEL</div>
+          <div className="text-xs text-slate-400 text-center">LEVEL</div>
           
           {/* Level Meter */}
-          <div className="h-32 bg-synth-bg rounded flex items-end justify-center p-1">
-            <div className="w-6 bg-gray-800 rounded relative">
+          <div className="h-32 bg-slate-800 rounded flex items-end justify-center p-1">
+            <div className="w-6 bg-slate-900 rounded relative">
               <div
                 className="absolute bottom-0 left-0 right-0 rounded transition-all duration-75"
                 style={{
@@ -321,7 +321,7 @@ export default function MixerConsole() {
               step="0.01"
               value={channel.volume}
               onChange={(e) => updateChannel(channel.id, { volume: Number(e.target.value) })}
-              className="w-full h-2 bg-synth-bg rounded-lg appearance-none cursor-pointer"
+              className="w-full h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-modern"
               style={{
                 background: `linear-gradient(to right, #374151 0%, #374151 ${channel.volume * 100}%, ${channel.color} ${channel.volume * 100}%, ${channel.color} 100%)`
               }}
@@ -342,8 +342,8 @@ export default function MixerConsole() {
             className={clsx(
               'flex-1 px-2 py-1 text-xs font-bold rounded transition-all duration-200',
               channel.muted
-                ? 'bg-synth-warning text-black shadow-lg shadow-synth-warning/30'
-                : 'bg-synth-control text-white hover:bg-gray-600'
+                ? 'bg-yellow-500 text-black shadow-lg shadow-yellow-500/30'
+                : 'bg-slate-700 text-white hover:bg-slate-600'
             )}
           >
             MUTE
@@ -356,8 +356,8 @@ export default function MixerConsole() {
             className={clsx(
               'flex-1 px-2 py-1 text-xs font-bold rounded transition-all duration-200',
               channel.solo
-                ? 'bg-synth-accent text-black shadow-lg shadow-synth-accent/30'
-                : 'bg-synth-control text-white hover:bg-gray-600'
+                ? 'bg-cyan-400 text-black shadow-lg shadow-cyan-400/30'
+                : 'bg-slate-700 text-white hover:bg-slate-600'
             )}
           >
             SOLO
@@ -368,16 +368,16 @@ export default function MixerConsole() {
   };
 
   return (
-    <div className="bg-synth-panel p-6 rounded-lg h-full overflow-auto">
+    <div className="glass-panel p-6 rounded-lg h-full overflow-auto">
       <div className="flex items-center justify-between mb-6">
-        <h3 className="text-xl font-bold text-synth-accent flex items-center gap-2">
+        <h3 className="text-xl font-bold text-cyan-400 flex items-center gap-2">
           <Sliders className="w-5 h-5" />
           Mixer Console
         </h3>
         
         <div className="flex items-center gap-4">
           <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-300">Master:</span>
+            <span className="text-sm text-slate-300">Master:</span>
             <input
               type="range"
               min="0"
@@ -388,14 +388,14 @@ export default function MixerConsole() {
                 ...prev, 
                 masterVolume: Number(e.target.value) 
               }))}
-              className="w-20"
+              className="w-20 slider-modern"
             />
-            <span className="text-synth-accent font-bold text-sm min-w-[3rem]">
+            <span className="text-cyan-400 font-bold text-sm min-w-[3rem]">
               {Math.round(mixerState.masterVolume * 100)}%
             </span>
           </div>
           
-          <button className="synth-button text-sm flex items-center gap-1">
+          <button className="btn-secondary text-sm flex items-center gap-1">
             <Settings className="w-3 h-3" />
             Settings
           </button>
@@ -408,16 +408,16 @@ export default function MixerConsole() {
       </div>
 
       {/* Master Section */}
-      <div className="mt-6 pt-6 border-t border-gray-700">
-        <div className="bg-synth-control rounded-lg p-4">
+      <div className="mt-6 pt-6 border-t border-slate-700">
+        <div className="glass-panel rounded-lg p-4">
           <h4 className="text-lg font-semibold text-white mb-4 text-center">Master Bus</h4>
           
           <div className="flex items-center justify-center gap-8">
             {/* Master Level Meter */}
             <div className="flex flex-col items-center gap-2">
-              <span className="text-xs text-gray-400">MASTER</span>
-              <div className="h-40 w-8 bg-synth-bg rounded flex items-end justify-center p-1">
-                <div className="w-6 bg-gray-800 rounded relative">
+              <span className="text-xs text-slate-400">MASTER</span>
+              <div className="h-40 w-8 bg-slate-800 rounded flex items-end justify-center p-1">
+                <div className="w-6 bg-slate-900 rounded relative">
                   <div
                     className="absolute bottom-0 left-0 right-0 rounded transition-all duration-75"
                     style={{
@@ -437,14 +437,14 @@ export default function MixerConsole() {
                   ...prev, 
                   masterVolume: Number(e.target.value) 
                 }))}
-                className="w-20 h-2 bg-synth-bg rounded-lg appearance-none cursor-pointer"
+                className="w-20 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer slider-modern"
               />
               <span className="text-xs text-white">{Math.round(mixerState.masterVolume * 100)}</span>
             </div>
 
             {/* Master Pan */}
             <div className="flex flex-col items-center gap-2">
-              <span className="text-xs text-gray-400">PAN</span>
+              <span className="text-xs text-slate-400">PAN</span>
               <div className="h-20 flex items-center">
                 <input
                   type="range"
@@ -456,7 +456,7 @@ export default function MixerConsole() {
                     ...prev, 
                     masterPan: Number(e.target.value) 
                   }))}
-                  className="w-20 h-2 bg-synth-bg rounded-lg appearance-none cursor-pointer transform rotate-90"
+                  className="w-20 h-2 bg-slate-700 rounded-lg appearance-none cursor-pointer transform rotate-90 slider-modern"
                 />
               </div>
               <span className="text-xs text-white">
@@ -467,11 +467,11 @@ export default function MixerConsole() {
 
           {/* Master Controls */}
           <div className="mt-4 flex justify-center gap-4">
-            <button className="synth-button flex items-center gap-2">
+            <button className="btn-secondary flex items-center gap-2">
               <Headphones className="w-4 h-4" />
               Monitor
             </button>
-            <button className="synth-button flex items-center gap-2">
+            <button className="btn-secondary flex items-center gap-2">
               <Mic className="w-4 h-4" />
               Talkback
             </button>
