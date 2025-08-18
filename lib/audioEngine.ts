@@ -756,7 +756,7 @@ export class AudioEngine {
         const now = this.audioContext.currentTime;
 
         // CRITICAL FIX: Use very fast release for immediate response
-        const releaseTime = 0.05; // Very fast release (50ms)
+        const releaseTime = 0.02; // Very fast release (20ms for immediate response)
 
         // CRITICAL FIX: Use proper exponential release for musical feel
         envelope.gain.cancelScheduledValues(now);
@@ -764,7 +764,7 @@ export class AudioEngine {
         envelope.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
 
         // CRITICAL FIX: Stop all oscillators after release with proper timing
-        const stopTime = now + releaseTime + 0.01; // Very small buffer for envelope completion
+        const stopTime = now + releaseTime + 0.005; // Very small buffer for envelope completion
         
         // Stop oscillators immediately after release
         setTimeout(() => {
@@ -787,8 +787,8 @@ export class AudioEngine {
           setTimeout(() => {
             this.activeNotes.delete(noteKey);
             this.voiceManager.delete(noteKey);
-          }, 100);
-        }, 10); // Start stop process almost immediately
+          }, 50);
+        }, 5); // Start stop process almost immediately
 
       } catch (error) {
         console.error('Error stopping note:', error);
