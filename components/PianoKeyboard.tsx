@@ -85,15 +85,38 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
 
   const handleKeyUp = (key: Key) => {
     const keyId = `${key.note}${key.octave}`;
-    setPressedKeys(prev => {
-      const newSet = new Set(prev);
-      newSet.delete(keyId);
-      return newSet;
+    if (pressedKeys.has(keyId)) {
+      setPressedKeys(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(keyId);
+        return newSet;
+      });
+      
+      // Always call release, even if key was already released
+      onKeyRelease(key.frequency);
+    }
+  };
+
+  // Force release all pressed keys - useful for emergency cleanup
+  const releaseAllKeys = () => {
+    console.log('Force releasing all pressed keys:', pressedKeys.size);
+    
+    pressedKeys.forEach(keyId => {
+      const [noteOctave] = keyId.split(/(\d+)/).filter(Boolean);
+      const octave = parseInt(keyId.match(/\d+/)?.[0] || '4');
+      const note = noteOctave.replace(/\d+/g, '');
+      
+      const frequency = noteToFrequency(note, octave);
+      onKeyRelease(frequency);
     });
-    onKeyRelease(key.frequency);
+    
+    setPressedKeys(new Set());
   };
 
   const changeOctave = (direction: 'up' | 'down') => {
+    // Release all keys before changing octave to prevent stuck notes
+    releaseAllKeys();
+    
     setCurrentOctave(prev => {
       if (direction === 'up' && prev < 7) {
         return prev + 1;
@@ -115,8 +138,10 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
     }, 1000);
   };
 
-  // Keyboard shortcuts
+  // Enhanced keyboard shortcuts with better key release handling
   useEffect(() => {
+    const activeKeyboardKeys = new Set<string>();
+    
     const keyMap: { [key: string]: Key | undefined } = {
       'a': keys.find(k => k.note === 'C' && k.octave === currentOctave),
       'w': keys.find(k => k.note === 'C#' && k.octave === currentOctave),
@@ -148,8 +173,18 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
         return;
       }
 
-      const key = keyMap[e.key.toLowerCase()];
-      if (key && !e.repeat) {
+      // Handle escape key - release all notes
+      if (e.key === 'Escape' && !e.repeat) {
+        releaseAllKeys();
+        return;
+      }
+
+      const keyString = e.key.toLowerCase();
+      const key = keyMap[keyString];
+      
+      if (key && !e.repeat && !activeKeyboardKeys.has(keyString)) {
+        activeKeyboardKeys.add(keyString);
+        
         // Add some velocity variation based on how fast the key is pressed
         const keyVelocity = Math.min(1, velocity + Math.random() * 0.2 - 0.1);
         handleKeyDown(key, keyVelocity);
@@ -157,20 +192,55 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
     };
 
     const handleKeyboardUp = (e: KeyboardEvent) => {
-      const key = keyMap[e.key.toLowerCase()];
-      if (key) {
+      const keyString = e.key.toLowerCase();
+      const key = keyMap[keyString];
+      
+      if (key && activeKeyboardKeys.has(keyString)) {
+        activeKeyboardKeys.delete(keyString);
         handleKeyUp(key);
       }
     };
 
+    // Handle focus loss to prevent stuck notes
+    const handleFocusLoss = () => {
+      console.log('Window lost focus, releasing all keys');
+      
+      // Release all keyboard keys
+      activeKeyboardKeys.forEach(keyString => {
+        const key = keyMap[keyString];
+        if (key) {
+          handleKeyUp(key);
+        }
+      });
+      activeKeyboardKeys.clear();
+      
+      // Also release all pressed keys
+      releaseAllKeys();
+    };
+
     window.addEventListener('keydown', handleKeyboardDown);
     window.addEventListener('keyup', handleKeyboardUp);
+    window.addEventListener('blur', handleFocusLoss);
+    window.addEventListener('visibility', handleFocusLoss);
 
     return () => {
       window.removeEventListener('keydown', handleKeyboardDown);
       window.removeEventListener('keyup', handleKeyboardUp);
+      window.removeEventListener('blur', handleFocusLoss);
+      window.removeEventListener('visibility', handleFocusLoss);
+      
+      // Clean up any remaining active keys
+      activeKeyboardKeys.clear();
+      releaseAllKeys();
     };
   }, [keys, currentOctave, velocity]);
+
+  // Clean up pressed keys when component unmounts or octave changes
+  useEffect(() => {
+    return () => {
+      releaseAllKeys();
+    };
+  }, [currentOctave]);
 
   return (
     <div className="bg-synth-panel p-6 rounded-lg">
@@ -179,13 +249,23 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
           Piano Keyboard
         </h3>
         
-        <button
-          onClick={() => setShowSoundSelector(!showSoundSelector)}
-          className="synth-button flex items-center gap-2"
-        >
-          <Settings className="w-4 h-4" />
-          Sounds
-        </button>
+        <div className="flex items-center gap-3">
+          <button
+            onClick={releaseAllKeys}
+            className="synth-button bg-red-600 hover:bg-red-700 text-xs px-3 py-1"
+            title="Release all stuck notes (Escape key)"
+          >
+            Release All
+          </button>
+          
+          <button
+            onClick={() => setShowSoundSelector(!showSoundSelector)}
+            className="synth-button flex items-center gap-2"
+          >
+            <Settings className="w-4 h-4" />
+            Sounds
+          </button>
+        </div>
       </div>
 
       {/* Sound Selector */}
@@ -274,11 +354,27 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
                 style={{
                   backgroundColor: isPressed ? selectedSound.color : undefined
                 }}
-                onMouseDown={() => handleKeyDown(key)}
-                onMouseUp={() => handleKeyUp(key)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleKeyDown(key);
+                }}
+                onMouseUp={(e) => {
+                  e.preventDefault();
+                  handleKeyUp(key);
+                }}
                 onMouseLeave={() => handleKeyUp(key)}
-                onTouchStart={() => handleKeyDown(key)}
-                onTouchEnd={() => handleKeyUp(key)}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleKeyDown(key);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  handleKeyUp(key);
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  handleKeyUp(key);
+                }}
               >
                 <span className={`text-xs mt-auto mb-2 ${isPressed ? 'text-white' : 'text-gray-600'}`}>
                   {key.note}{key.octave}
@@ -318,11 +414,27 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
                   left: `${leftPosition * whiteKeyWidth}%`,
                   backgroundColor: isPressed ? selectedSound.color : undefined
                 }}
-                onMouseDown={() => handleKeyDown(key)}
-                onMouseUp={() => handleKeyUp(key)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  handleKeyDown(key);
+                }}
+                onMouseUp={(e) => {
+                  e.preventDefault();
+                  handleKeyUp(key);
+                }}
                 onMouseLeave={() => handleKeyUp(key)}
-                onTouchStart={() => handleKeyDown(key)}
-                onTouchEnd={() => handleKeyUp(key)}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  handleKeyDown(key);
+                }}
+                onTouchEnd={(e) => {
+                  e.preventDefault();
+                  handleKeyUp(key);
+                }}
+                onTouchCancel={(e) => {
+                  e.preventDefault();
+                  handleKeyUp(key);
+                }}
               >
                 <span className={`text-xs mt-auto mb-1 ${isPressed ? 'text-white' : 'text-white'}`}>
                   {key.note}
@@ -336,8 +448,11 @@ export default function PianoKeyboard({ onKeyPress, onKeyRelease }: PianoKeyboar
       <div className="mt-4 text-sm text-gray-400 space-y-1">
         <p>Play with your mouse/touch or use keyboard shortcuts:</p>
         <p>White keys: A S D F G H J K L ; | Black keys: W E T Y U O P</p>
-        <p>Octave controls: Z (down) X (up) | Current range: C{currentOctave} - C{currentOctave + 2}</p>
+        <p>Octave controls: Z (down) X (up) | Emergency: Escape (release all)</p>
         <p>Sound: {selectedSound.name} ({selectedSound.category}) | Velocity: {Math.round(velocity * 100)}%</p>
+        {pressedKeys.size > 0 && (
+          <p className="text-yellow-400">Active notes: {pressedKeys.size}</p>
+        )}
       </div>
     </div>
   );

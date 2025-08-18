@@ -34,6 +34,7 @@ import Distortion from '@/components/Distortion';
 import FilterSweep from '@/components/FilterSweep';
 import Toolbar from '@/components/Toolbar';
 import StatusBar from '@/components/StatusBar';
+import { PianoSoundConfig } from '@/lib/pianoSounds';
 import { 
   Play, 
   Square, 
@@ -126,6 +127,7 @@ export default function SynthesizerStudio() {
   const audioEngineRef = useRef<AudioEngine | null>(null);
   const drumIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const cleanupIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize tabs with all the new components
   const initialTabs: Tab[] = [
@@ -276,6 +278,10 @@ export default function SynthesizerStudio() {
       setIsLoading(false);
       setError(null);
       setInitializationAttempts(0);
+
+      // Start periodic cleanup of stuck notes
+      startCleanupTimer();
+      
     } catch (err) {
       console.error('Audio engine initialization failed:', err);
       const errorMessage = err instanceof Error ? err.message : 'Unknown error occurred';
@@ -290,6 +296,20 @@ export default function SynthesizerStudio() {
       setIsLoading(false);
       setInitializationAttempts(attempt + 1);
     }
+  };
+
+  // Start cleanup timer to prevent stuck notes
+  const startCleanupTimer = () => {
+    if (cleanupIntervalRef.current) {
+      clearInterval(cleanupIntervalRef.current);
+    }
+    
+    // Run cleanup every 10 seconds
+    cleanupIntervalRef.current = setInterval(() => {
+      if (audioEngineRef.current) {
+        audioEngineRef.current.cleanupStuckNotes();
+      }
+    }, 10000);
   };
 
   // Initialize audio engine on mount
@@ -309,6 +329,9 @@ export default function SynthesizerStudio() {
       }
       if (recordingTimerRef.current) {
         clearInterval(recordingTimerRef.current);
+      }
+      if (cleanupIntervalRef.current) {
+        clearInterval(cleanupIntervalRef.current);
       }
     };
   }, []);
@@ -340,10 +363,16 @@ export default function SynthesizerStudio() {
     };
   }, []);
 
-  // Handle key press for piano
-  function handleKeyPress(frequency: number) {
+  // Handle key press for piano (with support for both synth and piano sounds)
+  function handleKeyPress(frequency: number, pianoSound?: PianoSoundConfig) {
     if (audioEngineRef.current && audioEngineRef.current.initialized) {
-      audioEngineRef.current.playNote(frequency, synthState);
+      if (pianoSound) {
+        // Use piano sound engine
+        audioEngineRef.current.playPianoNote(frequency, pianoSound);
+      } else {
+        // Use synthesizer engine
+        audioEngineRef.current.playNote(frequency, synthState);
+      }
     } else {
       handleUserInteraction();
     }
@@ -362,6 +391,11 @@ export default function SynthesizerStudio() {
 
   const handleStop = () => {
     setGlobalTransport(prev => ({ ...prev, isPlaying: false, isPaused: false }));
+    
+    // Emergency stop all notes when transport stops
+    if (audioEngineRef.current) {
+      audioEngineRef.current.stopAllNotes();
+    }
   };
 
   const handlePause = () => {
@@ -542,6 +576,36 @@ export default function SynthesizerStudio() {
     await initializeAudioEngine(initializationAttempts);
   };
 
+  // Emergency panic function - stop all audio
+  const handlePanic = () => {
+    console.log('PANIC: Stopping all audio');
+    if (audioEngineRef.current) {
+      audioEngineRef.current.stopAllNotes();
+      audioEngineRef.current.cleanupStuckNotes();
+    }
+    
+    // Stop drum sequencer
+    if (drumIntervalRef.current) {
+      clearInterval(drumIntervalRef.current);
+      drumIntervalRef.current = null;
+    }
+    setDrumState(prev => ({ ...prev, isPlaying: false, currentStep: 0 }));
+  };
+
+  // Add keyboard shortcuts for panic
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Panic button: Ctrl+Alt+Space or Cmd+Alt+Space
+      if ((e.ctrlKey || e.metaKey) && e.altKey && e.code === 'Space') {
+        e.preventDefault();
+        handlePanic();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -633,29 +697,40 @@ export default function SynthesizerStudio() {
         </div>
       )}
 
-      {/* Professional Toolbar */}
-      <Toolbar
-        isPlaying={globalTransport.isPlaying}
-        isRecording={globalTransport.isRecording}
-        isPaused={globalTransport.isPaused}
-        canUndo={false}
-        canRedo={false}
-        bpm={globalTransport.bpm}
-        masterVolume={globalTransport.masterVolume}
-        onPlay={handlePlay}
-        onStop={handleStop}
-        onPause={handlePause}
-        onRecord={handleRecord}
-        onUndo={() => {}}
-        onRedo={() => {}}
-        onSave={() => setShowPresets(true)}
-        onLoad={() => setShowPresets(true)}
-        onExport={() => {}}
-        onImport={() => {}}
-        onSettings={() => {}}
-        onBpmChange={handleBpmChange}
-        onVolumeChange={handleVolumeChange}
-      />
+      {/* Professional Toolbar with Panic Button */}
+      <div className="flex items-center justify-between">
+        <Toolbar
+          isPlaying={globalTransport.isPlaying}
+          isRecording={globalTransport.isRecording}
+          isPaused={globalTransport.isPaused}
+          canUndo={false}
+          canRedo={false}
+          bpm={globalTransport.bpm}
+          masterVolume={globalTransport.masterVolume}
+          onPlay={handlePlay}
+          onStop={handleStop}
+          onPause={handlePause}
+          onRecord={handleRecord}
+          onUndo={() => {}}
+          onRedo={() => {}}
+          onSave={() => setShowPresets(true)}
+          onLoad={() => setShowPresets(true)}
+          onExport={() => {}}
+          onImport={() => {}}
+          onSettings={() => {}}
+          onBpmChange={handleBpmChange}
+          onVolumeChange={handleVolumeChange}
+        />
+        
+        {/* Panic Button */}
+        <button
+          onClick={handlePanic}
+          className="synth-button bg-red-600 hover:bg-red-700 text-white px-4 py-2 mx-4"
+          title="Emergency stop all audio (Ctrl+Alt+Space)"
+        >
+          PANIC
+        </button>
+      </div>
 
       {/* Main Workspace */}
       <div className="flex-1 flex overflow-hidden">
@@ -709,7 +784,7 @@ export default function SynthesizerStudio() {
         </div>
       </div>
 
-      {/* Professional Status Bar */}
+      {/* Professional Status Bar with Debug Info */}
       <StatusBar
         isConnected={true}
         cpuUsage={25}
@@ -717,7 +792,7 @@ export default function SynthesizerStudio() {
         audioLatency={12}
         sampleRate={44100}
         bufferSize={256}
-        activeVoices={3}
+        activeVoices={audioEngineRef.current?.getActiveNotesCount() || 0}
         masterLevel={globalTransport.masterVolume}
         inputLevel={0.2}
         projectName="Untitled Project"

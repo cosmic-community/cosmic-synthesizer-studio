@@ -14,7 +14,15 @@ export class AudioEngine {
   private chorus: DelayNode | null = null;
   private chorusLFO: OscillatorNode | null = null;
   private chorusGain: GainNode | null = null;
-  private activeNotes: Map<string, { oscillators: OscillatorNode[]; envelope: GainNode; filter?: BiquadFilterNode; effectsChain?: AudioNode[] }> = new Map();
+  private activeNotes: Map<string, { 
+    oscillators: OscillatorNode[]; 
+    envelope: GainNode; 
+    filter?: BiquadFilterNode; 
+    effectsChain?: AudioNode[];
+    pianoSound?: PianoSoundConfig;
+    startTime: number;
+    releaseStarted: boolean;
+  }> = new Map();
   private mediaRecorder: MediaRecorder | null = null;
   private recordedChunks: Blob[] = [];
   private isInitialized: boolean = false;
@@ -285,11 +293,13 @@ export class AudioEngine {
       // Start oscillator
       oscillator.start();
 
-      // Store active note
+      // Store active note with improved tracking
       this.activeNotes.set(noteKey, { 
         oscillators: [oscillator], 
         envelope,
-        effectsChain
+        effectsChain,
+        startTime: now,
+        releaseStarted: false
       });
     } catch (error) {
       console.error('Error playing note:', error);
@@ -480,8 +490,15 @@ export class AudioEngine {
       // Start all oscillators
       oscillators.forEach(osc => osc.start(now));
 
-      // Store active note
-      this.activeNotes.set(noteKey, { oscillators, envelope, filter: noteFilter });
+      // Store active note with piano sound config and improved tracking
+      this.activeNotes.set(noteKey, { 
+        oscillators, 
+        envelope, 
+        filter: noteFilter,
+        pianoSound,
+        startTime: now,
+        releaseStarted: false
+      });
     } catch (error) {
       console.error('Error playing piano note:', error);
     }
@@ -571,33 +588,53 @@ export class AudioEngine {
     const noteKey = frequency.toString();
     const activeNote = this.activeNotes.get(noteKey);
 
-    if (activeNote) {
+    if (activeNote && !activeNote.releaseStarted) {
       try {
-        const { oscillators, envelope } = activeNote;
+        const { oscillators, envelope, pianoSound } = activeNote;
         const now = this.audioContext.currentTime;
 
-        // Get the piano sound from the active note (if available)
-        // For now, we'll use a default release time, but this could be improved
-        const releaseTime = 0.5; // Default release time
+        // Mark release as started to prevent double-triggering
+        activeNote.releaseStarted = true;
 
-        // Apply release
+        // Determine release time from piano sound config or use default
+        const releaseTime = pianoSound?.envelope?.release || 0.5;
+
+        // Cancel any scheduled changes and apply proper release envelope
         envelope.gain.cancelScheduledValues(now);
-        envelope.gain.setValueAtTime(envelope.gain.value, now);
-        envelope.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
+        
+        // Get current envelope value to ensure smooth transition
+        const currentValue = envelope.gain.value;
+        
+        // Set current value and ramp to zero
+        envelope.gain.setValueAtTime(currentValue, now);
+        
+        // Use exponential ramp for more natural release
+        if (currentValue > 0.001) {
+          envelope.gain.exponentialRampToValueAtTime(0.001, now + releaseTime);
+        } else {
+          envelope.gain.linearRampToValueAtTime(0, now + releaseTime);
+        }
 
-        // Stop all oscillators after release
-        setTimeout(() => {
+        // Stop oscillators after release time plus small buffer
+        const stopTime = now + releaseTime + 0.1;
+        
+        oscillators.forEach(osc => {
           try {
-            oscillators.forEach(osc => osc.stop());
+            osc.stop(stopTime);
           } catch (e) {
-            // Oscillators might already be stopped
+            // Oscillator might already be stopped or stopping
+            console.warn('Error stopping oscillator:', e);
           }
-        }, releaseTime * 1000);
+        });
 
-        // Clean up
-        this.activeNotes.delete(noteKey);
+        // Clean up note from active notes after complete stop
+        setTimeout(() => {
+          this.activeNotes.delete(noteKey);
+        }, (releaseTime + 0.2) * 1000);
+
       } catch (error) {
         console.error('Error stopping note:', error);
+        // Force cleanup on error
         this.activeNotes.delete(noteKey);
       }
     }
@@ -784,16 +821,81 @@ export class AudioEngine {
     }
   }
 
-  private cleanup(): void {
-    // Stop all active notes
-    this.activeNotes.forEach((note) => {
-      try {
-        note.oscillators.forEach(osc => osc.stop());
-      } catch (error) {
-        // Ignore errors when stopping oscillators
+  // Add emergency method to stop all active notes
+  public stopAllNotes(): void {
+    console.log(`Stopping ${this.activeNotes.size} active notes`);
+    
+    // Create a copy of the keys to avoid modification during iteration
+    const noteKeys = Array.from(this.activeNotes.keys());
+    
+    for (const noteKey of noteKeys) {
+      const frequency = parseFloat(noteKey);
+      if (!isNaN(frequency)) {
+        this.stopNote(frequency);
+      }
+    }
+  }
+
+  // Add method to check for stuck notes
+  public cleanupStuckNotes(): void {
+    if (!this.audioContext) return;
+    
+    const now = this.audioContext.currentTime;
+    const maxNoteAge = 30; // 30 seconds maximum note age
+    
+    const stuckNotes: string[] = [];
+    
+    this.activeNotes.forEach((note, noteKey) => {
+      const noteAge = now - note.startTime;
+      if (noteAge > maxNoteAge) {
+        console.warn(`Cleaning up stuck note: ${noteKey}, age: ${noteAge}s`);
+        stuckNotes.push(noteKey);
       }
     });
-    this.activeNotes.clear();
+    
+    // Force cleanup stuck notes
+    for (const noteKey of stuckNotes) {
+      const note = this.activeNotes.get(noteKey);
+      if (note) {
+        try {
+          // Force stop all oscillators
+          note.oscillators.forEach(osc => {
+            try {
+              osc.stop();
+            } catch (e) {
+              // Oscillator might already be stopped
+            }
+          });
+        } catch (error) {
+          console.error('Error force-stopping stuck note:', error);
+        }
+        
+        this.activeNotes.delete(noteKey);
+      }
+    }
+  }
+
+  private cleanup(): void {
+    // Stop all active notes
+    this.stopAllNotes();
+    
+    // Wait a moment for notes to stop gracefully, then force cleanup
+    setTimeout(() => {
+      this.activeNotes.forEach((note) => {
+        try {
+          note.oscillators.forEach(osc => {
+            try {
+              osc.stop();
+            } catch (error) {
+              // Ignore errors when stopping oscillators
+            }
+          });
+        } catch (error) {
+          // Ignore errors when stopping oscillators
+        }
+      });
+      this.activeNotes.clear();
+    }, 100);
     
     // Stop and clean up LFOs
     if (this.chorusLFO) {
@@ -837,5 +939,22 @@ export class AudioEngine {
 
   public get contextState(): string {
     return this.audioContext?.state || 'closed';
+  }
+
+  // Public method to get active notes count for debugging
+  public getActiveNotesCount(): number {
+    return this.activeNotes.size;
+  }
+
+  // Public method to get active notes info for debugging
+  public getActiveNotesInfo(): Array<{ frequency: string; age: number; releaseStarted: boolean }> {
+    if (!this.audioContext) return [];
+    
+    const now = this.audioContext.currentTime;
+    return Array.from(this.activeNotes.entries()).map(([frequency, note]) => ({
+      frequency,
+      age: now - note.startTime,
+      releaseStarted: note.releaseStarted
+    }));
   }
 }
